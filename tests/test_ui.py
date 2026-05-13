@@ -1,3 +1,4 @@
+import gradio as gr
 import pytest
 
 import ui
@@ -41,5 +42,67 @@ def test_model_selector_html_defaults_to_turbo():
 
 
 def test_model_selector_html_escapes_current_value():
-    out = ui.model_selector_html(current='<script>alert(1)</script>')
+    out = ui.model_selector_html(current="<script>alert(1)</script>")
     assert "<script>" not in out
+
+
+@pytest.fixture(autouse=True)
+def _blocks_ctx():
+    """Each builder must be called inside a gr.Blocks() context."""
+    with gr.Blocks():
+        yield
+
+
+def test_build_t2i_tab_returns_components():
+    components = ui.build_t2i_tab()
+    expected = {
+        "prompt",
+        "negative_prompt",
+        "model_state",
+        "steps",
+        "cfg",
+        "width",
+        "height",
+        "seed",
+        "lora_path",
+        "lora_strength",
+        "generate_btn",
+        "output_image",
+        "output_meta",
+    }
+    assert expected.issubset(components.keys())
+
+
+def test_build_controlnet_tab_returns_components():
+    components = ui.build_controlnet_tab()
+    expected = {
+        "prompt",
+        "input_image",
+        "preprocessor",
+        "controlnet_scale",
+        "steps",
+        "seed",
+        "lora_path",
+        "lora_strength",
+        "generate_btn",
+        "output_image",
+        "output_meta",
+    }
+    assert expected.issubset(components.keys())
+
+
+def test_build_upscale_tab_returns_components():
+    components = ui.build_upscale_tab()
+    expected = {
+        "prompt",
+        "input_image",
+        "refine_steps",
+        "refine_denoise",
+        "seed",
+        "lora_path",
+        "lora_strength",
+        "generate_btn",
+        "output_image",
+        "output_meta",
+    }
+    assert expected.issubset(components.keys())
