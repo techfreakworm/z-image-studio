@@ -162,6 +162,11 @@ def call_upscale(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dict[s
         sigma_shift=3.0,
         input_image=upscaled,
         denoising_strength=float(params.get("refine_denoise", 0.33)),
+        # Track the upscaled image's dims so the noise initializer builds latents of
+        # the same shape as the VAE-encoded input_image. Otherwise DiffSynth defaults
+        # height/width to 1024 and add_noise crashes on a shape mismatch.
+        height=upscaled.size[1],
+        width=upscaled.size[0],
         seed=int(params.get("seed", 0)),
     )
 

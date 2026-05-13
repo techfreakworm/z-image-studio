@@ -194,6 +194,10 @@ def test_upscale_runs_realesrgan_then_pipeline(fake_pipe, monkeypatch):
     assert kwargs["denoising_strength"] == 0.33
     assert kwargs["num_inference_steps"] == 5
     assert kwargs["cfg_scale"] == 1.0
+    # height/width must match the post-upscale image, else add_noise blows up on
+    # a shape mismatch between input_latents and noise.
+    assert kwargs["width"] == 1024
+    assert kwargs["height"] == 1024
     assert meta["mode"] == "upscale"
 
 

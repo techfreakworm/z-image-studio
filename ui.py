@@ -69,7 +69,7 @@ def build_t2i_tab() -> dict[str, gr.components.Component]:
                     info=TOOLTIPS["cfg"],
                 )
 
-            lora_enabled = gr.Checkbox(label="Use a LoRA", value=False)
+            lora_enabled = gr.Checkbox(label="Use a LoRA (compatible with Z-Image-Turbo)", value=False)
             with gr.Group(visible=False) as lora_group:
                 lora_path = gr.File(
                     label="LoRA file",
@@ -174,7 +174,7 @@ def build_controlnet_tab() -> dict[str, gr.components.Component]:
                     info=TOOLTIPS["controlnet_scale"],
                 )
 
-            lora_enabled = gr.Checkbox(label="Use a LoRA", value=False)
+            lora_enabled = gr.Checkbox(label="Use a LoRA (compatible with Z-Image-Turbo)", value=False)
             with gr.Group(visible=False) as lora_group:
                 lora_path = gr.File(
                     label="LoRA file",
@@ -262,7 +262,7 @@ def build_upscale_tab() -> dict[str, gr.components.Component]:
                     info=TOOLTIPS["refine_denoise"],
                 )
 
-            lora_enabled = gr.Checkbox(label="Use a LoRA", value=False)
+            lora_enabled = gr.Checkbox(label="Use a LoRA (compatible with Z-Image-Turbo)", value=False)
             with gr.Group(visible=False) as lora_group:
                 lora_path = gr.File(
                     label="LoRA file",

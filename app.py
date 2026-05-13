@@ -93,11 +93,12 @@ def _coerce_lora(lora_path: str | None) -> Path | None:
     return p
 
 
-def _on_model_change(model_name: str) -> tuple[int, float]:
-    """When the user picks Base / Turbo in the radio, update steps + cfg defaults."""
+def _on_model_change(model_name: str):
+    """When the user picks Base / Turbo in the radio, update steps + cfg defaults
+    and the LoRA-compatibility hint on the toggle label."""
     if model_name == "Base":
-        return 25, 4.0
-    return 8, 1.0  # Turbo
+        return 25, 4.0, gr.update(label="Use a LoRA (compatible with Z-Image)")
+    return 8, 1.0, gr.update(label="Use a LoRA (compatible with Z-Image-Turbo)")
 
 
 def _preview_cn(image, mode):
@@ -267,11 +268,12 @@ def build_app() -> gr.Blocks:
                     ],
                     outputs=[t["output_image"], t["output_meta"]],
                 )
-                # Radio change → update step / cfg defaults + reveal Base-only fields.
+                # Radio change → update step / cfg defaults + LoRA-compatibility hint
+                # on the toggle label + reveal Base-only fields.
                 t["model"].change(
                     fn=_on_model_change,
                     inputs=[t["model"]],
-                    outputs=[t["steps"], t["cfg"]],
+                    outputs=[t["steps"], t["cfg"], t["lora_enabled"]],
                 )
                 t["model"].change(
                     fn=lambda m: gr.Group(visible=(m == "Base")),
