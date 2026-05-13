@@ -1,0 +1,25 @@
+# Core
+gradio==5.50.0
+spaces==0.30.0
+diffsynth-studio>=0.5.0
+torch>=2.4
+safetensors>=0.4.5
+huggingface-hub>=0.27
+
+# ControlNet preprocessors
+controlnet-aux>=0.0.9
+opencv-python-headless>=4.9.0
+einops>=0.8.0
+
+# Upscaler
+realesrgan>=0.3.0
+basicsr>=1.4.2
+
+# Imaging
+pillow>=10.4.0
+numpy>=1.26
+
+# Dev
+ruff>=0.6.0
+pytest>=8.0
+pytest-mock>=3.14
