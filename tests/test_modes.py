@@ -110,3 +110,42 @@ def test_controlnet_rejects_missing_input_image(fake_pipe):
                         controlnet_scale=1.0, steps=9, seed=0,
                         lora_path=None, lora_strength=0.0),
         )
+
+
+def test_upscale_runs_realesrgan_then_pipeline(fake_pipe, monkeypatch):
+    calls = {"upscale": None}
+    def fake_2x(img, model_path):
+        calls["upscale"] = (img.size, str(model_path))
+        w, h = img.size
+        return img.resize((w * 2, h * 2), Image.LANCZOS)
+    monkeypatch.setattr(modes, "upscale", type("U", (), {"realesrgan_2x": staticmethod(fake_2x)}))
+
+    input_image = Image.new("RGB", (512, 512))
+    out, meta = modes.call_upscale(
+        fake_pipe,
+        params=dict(
+            prompt="masterpiece, 8k",
+            input_image=input_image,
+            refine_steps=5,
+            refine_denoise=0.33,
+            seed=42,
+            lora_path=None, lora_strength=0.0,
+            esrgan_model_path="/fake/path/RealESRGAN_x4plus.pth",
+        ),
+    )
+
+    assert calls["upscale"] == ((512, 512), "/fake/path/RealESRGAN_x4plus.pth")
+    kwargs = fake_pipe.call_args.kwargs
+    assert kwargs["input_image"].size == (1024, 1024)  # 2x via fake_2x
+    assert kwargs["denoising_strength"] == 0.33
+    assert kwargs["num_inference_steps"] == 5
+    assert kwargs["cfg_scale"] == 1.0
+    assert meta["mode"] == "upscale"
+
+
+def test_upscale_rejects_missing_image(fake_pipe):
+    with pytest.raises(ValueError):
+        modes.call_upscale(fake_pipe, params=dict(prompt="x", input_image=None,
+                                                   refine_steps=5, refine_denoise=0.33, seed=0,
+                                                   lora_path=None, lora_strength=0.0,
+                                                   esrgan_model_path="/fake.pth"))
