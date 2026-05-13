@@ -35,7 +35,9 @@ def _run_canny(image: Image.Image) -> Image.Image:
 
 
 def _run_depth(image: Image.Image) -> Image.Image:
-    proc = _get_processor("midas")
+    # controlnet_aux's Processor takes "depth_midas", NOT "midas".
+    # Plain "midas" is not in its MODELS dict and raises KeyError.
+    proc = _get_processor("depth_midas")
     out: Any = proc(image)
     if isinstance(out, Image.Image):
         return out.convert("RGB")

@@ -26,7 +26,16 @@ _MODEL_CACHE: dict[str, Any] = {}
 
 def _realesrgan_4x(model_path: Path | str, image: Image.Image) -> Image.Image:
     """Run RealESRGAN x4plus on ``image``. Caches the model in-process."""
+    import sys
+
     import numpy as np
+    import torchvision.transforms.functional as _tvf
+
+    # basicsr (a realesrgan dep) imports torchvision.transforms.functional_tensor,
+    # which was removed in torchvision >=0.17. Alias the old path to the current
+    # module so basicsr's degradations import keeps working.
+    sys.modules.setdefault("torchvision.transforms.functional_tensor", _tvf)
+
     from basicsr.archs.rrdbnet_arch import RRDBNet
     from realesrgan import RealESRGANer
 

@@ -105,12 +105,20 @@ def _preview_cn(image, mode):
 
     Wrapped in ``try/except`` so that a missing optional dep (controlnet_aux for
     Depth / Pose) never breaks the form — it just falls back to the raw input.
+    We DO log the exception to stderr so the next failure surfaces in the logs
+    rather than silently showing the user the original image (the previous
+    behavior hid a typo'd processor name for weeks).
     """
     if image is None:
         return None
     try:
         return preprocessors.run(mode, image)
-    except Exception:
+    except Exception as e:
+        import sys
+        import traceback
+
+        print(f"[preview_cn] {mode!r} failed: {e}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
         return image
 
 
