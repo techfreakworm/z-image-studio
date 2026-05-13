@@ -106,7 +106,19 @@ def _esrgan_path() -> str:
     return hf_hub_download("lllyasviel/Annotators", "RealESRGAN_x4plus.pth")
 
 
-def on_t2i_generate(prompt, negative_prompt, model, steps, cfg, width, height, seed, lora_path, lora_strength):
+def on_t2i_generate(
+    prompt,
+    negative_prompt,
+    model,
+    steps,
+    cfg,
+    width,
+    height,
+    seed,
+    lora_path,
+    lora_strength,
+    progress=gr.Progress(track_tqdm=True),  # noqa: B008
+):
     try:
         lora_p = _coerce_lora(lora_path)
     except lora_mod.LoRAValidationError as e:
@@ -128,7 +140,17 @@ def on_t2i_generate(prompt, negative_prompt, model, steps, cfg, width, height, s
     return image, meta
 
 
-def on_controlnet_generate(prompt, input_image, preprocessor, controlnet_scale, steps, seed, lora_path, lora_strength):
+def on_controlnet_generate(
+    prompt,
+    input_image,
+    preprocessor,
+    controlnet_scale,
+    steps,
+    seed,
+    lora_path,
+    lora_strength,
+    progress=gr.Progress(track_tqdm=True),  # noqa: B008
+):
     try:
         lora_p = _coerce_lora(lora_path)
     except lora_mod.LoRAValidationError as e:
@@ -148,7 +170,16 @@ def on_controlnet_generate(prompt, input_image, preprocessor, controlnet_scale, 
     return image, meta
 
 
-def on_upscale_generate(prompt, input_image, refine_steps, refine_denoise, seed, lora_path, lora_strength):
+def on_upscale_generate(
+    prompt,
+    input_image,
+    refine_steps,
+    refine_denoise,
+    seed,
+    lora_path,
+    lora_strength,
+    progress=gr.Progress(track_tqdm=True),  # noqa: B008
+):
     try:
         lora_p = _coerce_lora(lora_path)
     except lora_mod.LoRAValidationError as e:

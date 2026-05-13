@@ -79,9 +79,16 @@ def test_t2i_swaps_transformer_via_pool_index(fake_pipe):
     modes.call_t2i(
         fake_pipe,
         params=dict(
-            prompt="x", negative_prompt="", model="Base",
-            steps=25, cfg=4.0, width=1024, height=1024, seed=0,
-            lora_path=None, lora_strength=0.0,
+            prompt="x",
+            negative_prompt="",
+            model="Base",
+            steps=25,
+            cfg=4.0,
+            width=1024,
+            height=1024,
+            seed=0,
+            lora_path=None,
+            lora_strength=0.0,
         ),
     )
     assert fake_pipe.dit is base_dit
@@ -89,9 +96,16 @@ def test_t2i_swaps_transformer_via_pool_index(fake_pipe):
     modes.call_t2i(
         fake_pipe,
         params=dict(
-            prompt="x", negative_prompt="", model="Turbo",
-            steps=8, cfg=1.0, width=1024, height=1024, seed=0,
-            lora_path=None, lora_strength=0.0,
+            prompt="x",
+            negative_prompt="",
+            model="Turbo",
+            steps=8,
+            cfg=1.0,
+            width=1024,
+            height=1024,
+            seed=0,
+            lora_path=None,
+            lora_strength=0.0,
         ),
     )
     assert fake_pipe.dit is turbo_dit
