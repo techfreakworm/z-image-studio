@@ -28,8 +28,19 @@ def test_css_string_contains_critical_selectors():
 
 def test_fonts_geist_and_geist_mono():
     th = theme.build_theme()
-    # gr.themes.GoogleFont stringifies to its name
-    fonts = [str(f) for f in th.font]
+
+    # (a) Iterable lists: .font_list / .font_mono_list expose the original entries.
+    fonts = [str(f) for f in th.font_list]
     assert any("Geist" in f for f in fonts)
-    monos = [str(f) for f in th.font_mono]
+    monos = [str(f) for f in th.font_mono_list]
     assert any("Geist Mono" in f for f in monos)
+
+    # (b) CSS variables: _get_theme_css() must emit --font and --font-mono that
+    #     reference Geist / Geist Mono so the browser actually loads the fonts.
+    #     This assertion is what catches the original bug where property setters
+    #     redirected self.font → font_str, causing --font-str to be emitted instead.
+    css = th._get_theme_css()
+    assert "--font:" in css, "--font CSS variable missing from generated theme CSS"
+    assert "--font-mono:" in css, "--font-mono CSS variable missing from generated theme CSS"
+    assert "Geist" in css, "Geist font name missing from generated theme CSS"
+    assert "Geist Mono" in css, "Geist Mono font name missing from generated theme CSS"

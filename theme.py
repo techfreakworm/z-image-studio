@@ -20,30 +20,23 @@ AMBER: dict[str, str] = {
 
 
 class _OnyxAmberBase(gr.themes.Base):
-    """gr.themes.Base subclass that exposes font/font_mono as lists of font objects.
+    """gr.themes.Base subclass with helpers for iterating over font lists.
 
-    In Gradio 5.x, Base.__init__ collapses font lists to a CSS string and assigns
-    them to self.font / self.font_mono.  The internal lists are kept on self._font
-    and self._font_mono.  This subclass redirects the public attributes to the
-    internal lists so callers can iterate over GoogleFont / str entries directly.
-    The CSS strings are preserved on self.font_str / self.font_mono_str.
+    Gradio collapses font lists into a CSS string at __init__; we expose the
+    original lists via .font_list / .font_mono_list for code that needs to
+    iterate.  The public self.font / self.font_mono attributes are left alone so
+    that _get_theme_css() emits the correct --font / --font-mono CSS variables.
     """
 
-    @property  # type: ignore[override]
-    def font(self) -> list:  # type: ignore[override]
+    @property
+    def font_list(self) -> list:
+        """Return the original font list (GoogleFont + str entries)."""
         return self._font
 
-    @font.setter
-    def font(self, val: str) -> None:
-        self.font_str = val
-
-    @property  # type: ignore[override]
-    def font_mono(self) -> list:  # type: ignore[override]
+    @property
+    def font_mono_list(self) -> list:
+        """Return the original monospace font list (GoogleFont + str entries)."""
         return self._font_mono
-
-    @font_mono.setter
-    def font_mono(self, val: str) -> None:
-        self.font_mono_str = val
 
 
 def build_theme() -> gr.themes.Base:
