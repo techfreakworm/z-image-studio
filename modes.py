@@ -153,6 +153,16 @@ def call_upscale(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dict[s
 
     upscaled = upscale.realesrgan_2x(input_image, model_path=params["esrgan_model_path"])
 
+    # DiffSynth rounds height/width *up* to multiples of 16 when allocating noise,
+    # but its VAE rounds the encoded image *down* to the same modulus. If we hand it
+    # an upscaled PIL whose dims aren't already aligned, the two latents come back
+    # at different shapes and add_noise crashes (RuntimeError: tensor a vs b on dim 3).
+    # Crop to the floor-multiple-of-16 here so both paths land on the same shape.
+    w, h = upscaled.size
+    aligned_w, aligned_h = (w // 16) * 16, (h // 16) * 16
+    if (aligned_w, aligned_h) != (w, h):
+        upscaled = upscaled.crop((0, 0, aligned_w, aligned_h))
+
     _swap_transformer(pipe, "Turbo")
 
     kwargs: dict[str, Any] = dict(
@@ -162,9 +172,6 @@ def call_upscale(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dict[s
         sigma_shift=3.0,
         input_image=upscaled,
         denoising_strength=float(params.get("refine_denoise", 0.33)),
-        # Track the upscaled image's dims so the noise initializer builds latents of
-        # the same shape as the VAE-encoded input_image. Otherwise DiffSynth defaults
-        # height/width to 1024 and add_noise crashes on a shape mismatch.
         height=upscaled.size[1],
         width=upscaled.size[0],
         seed=int(params.get("seed", 0)),

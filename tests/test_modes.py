@@ -201,6 +201,39 @@ def test_upscale_runs_realesrgan_then_pipeline(fake_pipe, monkeypatch):
     assert meta["mode"] == "upscale"
 
 
+def test_upscale_crops_to_multiple_of_16(fake_pipe, monkeypatch):
+    """Regression: an upscaled image with non-aligned dims used to crash the pipeline
+    in add_noise because DiffSynth rounds height/width *up* to mod 16 for the noise
+    tensor while its VAE rounds *down* for the encoded latents. We crop to mod 16
+    before passing in, so both shapes agree."""
+
+    def fake_2x(img, model_path):
+        return Image.new("RGB", (1240, 728))  # 1240, 728 are NOT multiples of 16
+
+    monkeypatch.setattr(modes, "upscale", type("U", (), {"realesrgan_2x": staticmethod(fake_2x)}))
+
+    _out, meta = modes.call_upscale(
+        fake_pipe,
+        params=dict(
+            prompt="masterpiece, 8k",
+            input_image=Image.new("RGB", (620, 364)),
+            refine_steps=5,
+            refine_denoise=0.33,
+            seed=0,
+            lora_path=None,
+            lora_strength=0.0,
+            esrgan_model_path="/fake/path/RealESRGAN_x4plus.pth",
+        ),
+    )
+
+    kwargs = fake_pipe.call_args.kwargs
+    assert kwargs["width"] == 1232  # 1240 // 16 * 16
+    assert kwargs["height"] == 720  # 728 // 16 * 16
+    assert kwargs["input_image"].size == (1232, 720)
+    assert meta["width"] == 1232
+    assert meta["height"] == 720
+
+
 def test_upscale_rejects_missing_image(fake_pipe):
     with pytest.raises(ValueError):
         modes.call_upscale(
