@@ -4,8 +4,10 @@ gradio==5.50.0
 # Locally, install it ad-hoc if you want to test the @spaces.GPU decorator path.
 diffsynth @ git+https://github.com/modelscope/DiffSynth-Studio.git
 torch>=2.4
+torchaudio>=2.4   # DiffSynth blanket-imports torchaudio in diffsynth.core.data.operators
 safetensors>=0.4.5
 huggingface-hub>=0.27
+transformers>=4.45,<5.0  # DiffSynth 2.0.7 imports SiglipVisionTransformer (removed in transformers 5.x)
 
 # ControlNet preprocessors
 controlnet-aux>=0.0.9
