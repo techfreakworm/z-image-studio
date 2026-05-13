@@ -32,3 +32,49 @@ def test_duration_upscale_has_realesrgan_overhead():
     t2i = backend.duration_for(mode="t2i", params=dict(model="Turbo", steps=8, width=1024, height=1024))
     upsc = backend.duration_for(mode="upscale", params=dict(refine_steps=5, width=1024, height=1024))
     assert upsc > t2i
+
+
+from unittest.mock import MagicMock
+
+import pytest
+from PIL import Image
+
+
+@pytest.fixture
+def fake_backend(monkeypatch):
+    """A ZImageStudioBackend whose constructor doesn't actually build a pipeline."""
+    monkeypatch.setattr(backend, "_build_pipeline", lambda *a, **kw: MagicMock())
+    b = backend.ZImageStudioBackend()
+    b.pipeline.return_value = Image.new("RGB", (32, 32))
+    b.pipeline.dit = MagicMock()
+    b.pipeline.model_pool = MagicMock()
+    return b
+
+
+def test_backend_generate_routes_t2i(fake_backend):
+    img, meta = fake_backend.generate(
+        mode="t2i",
+        params=dict(prompt="cat", negative_prompt="", model="Turbo",
+                    steps=8, cfg=1.0, width=1024, height=1024, seed=42,
+                    lora_path=None, lora_strength=0.0),
+    )
+    assert isinstance(img, Image.Image)
+    assert meta["mode"] == "t2i"
+    assert meta["model"] == "Turbo"
+
+
+def test_backend_generate_routes_controlnet(fake_backend, monkeypatch):
+    monkeypatch.setattr(backend.modes, "preprocessors",
+                        type("P", (), {"run": staticmethod(lambda m, i: i)}))
+    img, meta = fake_backend.generate(
+        mode="controlnet",
+        params=dict(prompt="cat", input_image=Image.new("RGB", (64, 64)),
+                    preprocessor="Canny", controlnet_scale=1.0,
+                    steps=9, seed=0, lora_path=None, lora_strength=0.0),
+    )
+    assert meta["mode"] == "controlnet"
+
+
+def test_backend_generate_unknown_mode_raises(fake_backend):
+    with pytest.raises(ValueError):
+        fake_backend.generate(mode="dance", params={})
