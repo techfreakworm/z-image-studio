@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import json
 import struct
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Iterator
 
 ZIMAGE_LORA_PREFIXES = ("transformer.", "dit.", "model.transformer.")
 
@@ -68,3 +70,50 @@ def sniff(path: Path | str) -> LoRAInfo:
         target="transformer",
         size_bytes=path.stat().st_size,
     )
+
+
+@contextmanager
+def applied_lora(pipe: Any, path: Path | str | None, strength: float) -> Iterator[None]:
+    """Apply a LoRA to the pipeline's dit for the duration of the context.
+
+    Reverts on exit (including exception path) so the cached GPU model is left clean.
+    If ``path`` is ``None``, this is a no-op.
+
+    Validates the LoRA file with :func:`sniff` before touching the pipeline so a bad
+    file is rejected before any GPU work begins.
+    """
+    if path is None:
+        yield
+        return
+
+    sniff(path)  # raises LoRAValidationError on bad input
+    _apply_lora_impl(pipe, path, strength)
+    try:
+        yield
+    finally:
+        _revert_lora_impl(pipe)
+
+
+def _apply_lora_impl(pipe: Any, path: Path | str, strength: float) -> None:
+    """Apply a LoRA to ``pipe.dit``. Imports DiffSynth lazily for testability."""
+    from diffsynth.utils.lora import merge_lora
+    merge_lora(pipe.dit, str(path), alpha=float(strength))
+
+
+def _revert_lora_impl(pipe: Any) -> None:
+    """Revert the most recent LoRA from ``pipe.dit``.
+
+    Tries DiffSynth's ``unmerge_lora`` first; falls back to re-fetching clean
+    weights from the model pool if unavailable.
+    """
+    try:
+        from diffsynth.utils.lora import unmerge_lora
+        unmerge_lora(pipe.dit)
+        return
+    except ImportError:
+        pass
+
+    if hasattr(pipe, "model_pool"):
+        variant = getattr(pipe.dit, "_zis_variant", None)
+        if variant:
+            pipe.dit = pipe.model_pool.fetch_model("z_image_dit", variant=variant)
