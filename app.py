@@ -228,7 +228,7 @@ def on_upscale_generate(
 HEADER_HTML = """
 <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 4px 0;">
   <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em;">
-    z-image-studio<span class="zis-brand-period">.</span>
+    Z-Image Studio<span class="zis-brand-period">.</span>
   </div>
   <div class="zis-status-dot" style="font-size:11px;color:#988B7C;letter-spacing:0.02em;">ready</div>
 </div>
@@ -236,7 +236,7 @@ HEADER_HTML = """
 
 
 def build_app() -> gr.Blocks:
-    with gr.Blocks(theme=theme.build_theme(), css=theme.CSS, title="z-image-studio") as demo:
+    with gr.Blocks(theme=theme.build_theme(), css=theme.CSS, title="Z-Image Studio") as demo:
         gr.HTML(HEADER_HTML)
 
         with gr.Tabs():
