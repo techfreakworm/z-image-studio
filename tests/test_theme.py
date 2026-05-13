@@ -44,3 +44,25 @@ def test_fonts_geist_and_geist_mono():
     assert "--font-mono:" in css, "--font-mono CSS variable missing from generated theme CSS"
     assert "Geist" in css, "Geist font name missing from generated theme CSS"
     assert "Geist Mono" in css, "Geist Mono font name missing from generated theme CSS"
+
+
+def test_css_includes_param_tooltip_rule():
+    css = theme.CSS
+    assert ".zis-info" in css
+    assert "data-info" in css  # attr() reference in ::after
+    assert "::after" in css
+
+
+def test_css_includes_model_selector_rules():
+    css = theme.CSS
+    assert ".zis-models" in css
+    assert ".zis-model" in css
+    assert ".zis-model.on" in css
+    assert ".zis-model.soon" in css
+
+
+def test_css_model_grid_is_responsive():
+    css = theme.CSS
+    assert "grid-template-columns" in css
+    assert "@media" in css
+    assert "min-width: 768px" in css or "min-width:768px" in css

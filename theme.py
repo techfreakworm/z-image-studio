@@ -117,4 +117,100 @@ body, .gradio-container {
 .zis-lora.loaded {
     border: 1px solid #FFB02E !important;
 }
+
+/* ===== Param tooltip — (i) icon next to labels (spec § 4.6) ===== */
+
+.zis-row-label {
+    display: inline-flex; align-items: center;
+    font-size: 11px; color: #A89478; font-weight: 500;
+    margin-bottom: 6px;
+}
+.zis-info {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 12px; height: 12px;
+    font: italic 600 8px 'Geist', system-ui, sans-serif;
+    border: 1px solid #2A2218; border-radius: 50%;
+    color: #A89478; vertical-align: super;
+    margin-left: 3px; cursor: help; position: relative;
+    transition: border-color 0.12s, color 0.12s;
+}
+.zis-info:hover { border-color: #FFB02E; color: #FFB02E; }
+.zis-info::after {
+    content: attr(data-info);
+    position: absolute; bottom: 100%; left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    background: #1C170F; color: #FAF1E3;
+    border: 1px solid #2A2218; border-radius: 6px;
+    padding: 6px 10px;
+    font: 400 11px 'Geist', system-ui, sans-serif; line-height: 1.4;
+    width: 200px; white-space: normal;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.12s; z-index: 50;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.zis-info:hover::after, .zis-info.shown::after { opacity: 1; }
+
+/* ===== Custom model selector — 2-col phone / 4-col tablet+ (spec § 4.7) ===== */
+
+.zis-models {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+@media (min-width: 768px) {
+    .zis-models { grid-template-columns: repeat(4, 1fr); }
+}
+.zis-model {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #2A2218; border-radius: 8px;
+    background: transparent; cursor: pointer;
+    color: #FAF1E3;
+    font: 500 12px 'Geist', system-ui, sans-serif;
+    text-decoration: none;
+    transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+}
+.zis-model .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 1px solid #2A2218; flex-shrink: 0;
+}
+.zis-model .name { flex: 1; text-align: left; }
+.zis-model.on {
+    background: #FFB02E; color: #1A1208; border-color: #FFB02E;
+}
+.zis-model.on .dot { background: #1A1208; border-color: #1A1208; }
+.zis-model.soon {
+    opacity: 0.55;
+    background: rgba(255,176,46,0.04);
+    border-style: dashed;
+    position: relative;
+}
+.zis-model.soon .name { color: #A89478; }
+.zis-model.soon .name .ext {
+    font-size: 10px; color: #FFB02E;
+    margin-left: 4px; vertical-align: super;
+}
+.zis-model.soon .soon-tag {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: rgba(255,176,46,0.18); color: #FFB02E;
+    padding: 2px 6px; border-radius: 100px;
+    flex-shrink: 0;
+}
+.zis-model.soon:hover { opacity: 0.78; border-color: #FFB02E; }
+.zis-model.soon::after {
+    content: "Coming soon — opens GitHub";
+    position: absolute; bottom: 100%; left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    background: #1C170F; color: #FAF1E3;
+    border: 1px solid #2A2218; border-radius: 6px;
+    padding: 6px 10px;
+    font: 400 11px 'Geist', system-ui, sans-serif;
+    white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.12s; z-index: 50;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.zis-model.soon:hover::after { opacity: 1; }
 """.strip()
