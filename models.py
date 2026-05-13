@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 # Avoid importing torch at module load — keeps `import models` fast in CI.
@@ -94,3 +95,54 @@ def build_diffsynth_configs(
         DSConfig(model_id=c.model_id, origin_file_pattern=c.origin_file_pattern, **(vram_cfg or {}))
         for c in configs
     ]
+
+
+def mirror_preload_hf_cache(src_root: Path | str, dst_root: Path | str) -> None:
+    """Mirror a read-only HF cache tree (preload_from_hub) into a writable tree.
+
+    - ``blobs/<sha>`` files -> **hardlinked** (zero-copy, shared inode).
+    - ``snapshots/<commit>/...`` symlinks -> **preserved** with original relative target.
+    - ``refs/<branch>`` files -> **byte-copied** (HF lib overwrites on etag check).
+    - Directories -> ``mkdir`` so the runtime user owns them.
+
+    Falls back to ``symlink`` when ``os.link()`` raises EXDEV (cross-device).
+    """
+    import errno
+    import shutil
+
+    src_root = Path(src_root)
+    dst_root = Path(dst_root)
+
+    if not (src_root / "hub").exists():
+        return  # nothing preloaded -- no-op
+
+    for src_dir, _, files in os.walk(src_root / "hub"):
+        rel = Path(src_dir).relative_to(src_root)
+        dst_dir = dst_root / rel
+        dst_dir.mkdir(parents=True, exist_ok=True)
+
+        for name in files:
+            src_path = Path(src_dir) / name
+            dst_path = dst_dir / name
+            if dst_path.exists():
+                continue
+
+            # Refs get byte-copied
+            if "refs/" in str(rel).replace("\\", "/"):
+                shutil.copy2(src_path, dst_path)
+                continue
+
+            # Symlinks (snapshot files) preserve their relative target
+            if src_path.is_symlink():
+                target = os.readlink(src_path)
+                dst_path.symlink_to(target)
+                continue
+
+            # Regular files (blobs) hardlink with EXDEV fallback
+            try:
+                os.link(src_path, dst_path)
+            except OSError as e:
+                if e.errno == errno.EXDEV:
+                    dst_path.symlink_to(src_path)
+                else:
+                    raise
