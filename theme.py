@@ -1,54 +1,45 @@
-"""Onyx Amber theme — palette tokens, gr.themes.Base subclass, and CSS string."""
+"""Soft Dark Restraint theme — warm-toned dark surface with a single amber accent.
+
+Palette tokens, ``gr.themes.Base`` configuration, and a small CSS string that
+applies the touches Gradio's theme tokens can't express alone (link row under
+the model radio + compact LoRA file widget).
+"""
 
 from __future__ import annotations
 
 import gradio as gr
 
-AMBER: dict[str, str] = {
-    "body_bg": "#0F0C08",
-    "panel_bg": "#0F0C08",
-    "input_bg": "#0F0C08",
-    "canvas_bg": "#110D08",
-    "border": "#2A2218",
-    "text": "#FAF1E3",
-    "text_dim": "#A89478",
+# Single source of truth for the palette. The mockup at
+# ``.superpowers/brainstorm/47889-1778679653/content/simple-v1.html`` is the
+# locked spec for these values (Variant A — "Soft Dark Restraint").
+PALETTE: dict[str, str] = {
+    "body_bg": "#1A1614",
+    "panel_bg": "#1F1B17",
+    "input_bg": "#14110F",
+    "text": "#F0E8DD",
+    "text_dim": "#988B7C",
+    "border": "#2A241E",
+    "border_strong": "#3A3128",
     "accent": "#FFB02E",
     "accent_text": "#1A1208",
-    "radius": "8px",
-    "radius_sm": "6px",
+    "radius": "6px",
 }
 
 
-class _OnyxAmberBase(gr.themes.Base):
-    """gr.themes.Base subclass with helpers for iterating over font lists.
-
-    Gradio collapses font lists into a CSS string at __init__; we expose the
-    original lists via .font_list / .font_mono_list for code that needs to
-    iterate.  The public self.font / self.font_mono attributes are left alone so
-    that _get_theme_css() emits the correct --font / --font-mono CSS variables.
-    """
-
-    @property
-    def font_list(self) -> list:
-        """Return the original font list (GoogleFont + str entries)."""
-        return self._font
-
-    @property
-    def font_mono_list(self) -> list:
-        """Return the original monospace font list (GoogleFont + str entries)."""
-        return self._font_mono
-
-
 def build_theme() -> gr.themes.Base:
-    """Return a Gradio theme matching the Onyx Amber palette."""
-    return _OnyxAmberBase(
+    """Return a Gradio theme matching the Soft Dark Restraint palette.
+
+    Uses Gradio's default font chain (Inter + system-ui fallbacks). No mono
+    font — the redesign drops monospaced UI text entirely.
+    """
+    return gr.themes.Base(
         primary_hue=gr.themes.Color(
             c50="#FFF8E6",
             c100="#FFEFC2",
             c200="#FFE08A",
             c300="#FFD161",
             c400="#FFC042",
-            c500=AMBER["accent"],
+            c500=PALETTE["accent"],
             c600="#E69926",
             c700="#B37A1F",
             c800="#805717",
@@ -56,164 +47,85 @@ def build_theme() -> gr.themes.Base:
             c950="#1A1208",
         ),
         neutral_hue=gr.themes.Color(
-            c50="#FAF1E3",
-            c100="#E8DCC4",
-            c200="#D4C2A1",
-            c300="#A89478",
-            c400="#867054",
-            c500="#5C4D38",
-            c600="#3C3225",
-            c700="#2A2218",
-            c800="#1C170F",
-            c900="#100C08",
-            c950="#0A0805",
+            c50="#F0E8DD",
+            c100="#E0D5C3",
+            c200="#C8B89E",
+            c300="#988B7C",
+            c400="#7A6E60",
+            c500="#5C5246",
+            c600="#3A3128",
+            c700="#2A241E",
+            c800="#1F1B17",
+            c900="#1A1614",
+            c950="#14110F",
         ),
-        font=[gr.themes.GoogleFont("Geist"), "system-ui", "sans-serif"],
-        font_mono=[gr.themes.GoogleFont("Geist Mono"), "ui-monospace", "monospace"],
-        radius_size=gr.themes.sizes.radius_md,
+        radius_size=gr.themes.sizes.radius_sm,
     ).set(
-        body_background_fill=AMBER["body_bg"],
-        body_text_color=AMBER["text"],
-        body_text_color_subdued=AMBER["text_dim"],
-        background_fill_primary=AMBER["panel_bg"],
-        background_fill_secondary=AMBER["canvas_bg"],
-        block_background_fill=AMBER["panel_bg"],
-        block_border_color=AMBER["border"],
+        body_background_fill=PALETTE["body_bg"],
+        body_text_color=PALETTE["text"],
+        body_text_color_subdued=PALETTE["text_dim"],
+        background_fill_primary=PALETTE["panel_bg"],
+        background_fill_secondary=PALETTE["body_bg"],
+        block_background_fill=PALETTE["panel_bg"],
+        block_border_color=PALETTE["border"],
         block_border_width="1px",
-        block_radius=AMBER["radius"],
-        input_background_fill=AMBER["input_bg"],
-        input_border_color=AMBER["border"],
-        button_primary_background_fill=AMBER["accent"],
-        button_primary_background_fill_hover=AMBER["accent"],
-        button_primary_text_color=AMBER["accent_text"],
-        button_primary_border_color=AMBER["accent"],
-        slider_color=AMBER["accent"],
-        color_accent=AMBER["accent"],
+        block_radius=PALETTE["radius"],
+        input_background_fill=PALETTE["input_bg"],
+        input_border_color=PALETTE["border"],
+        button_primary_background_fill=PALETTE["accent"],
+        button_primary_background_fill_hover=PALETTE["accent"],
+        button_primary_text_color=PALETTE["accent_text"],
+        button_primary_border_color=PALETTE["accent"],
+        slider_color=PALETTE["accent"],
+        color_accent=PALETTE["accent"],
         color_accent_soft="rgba(255,176,46,0.12)",
     )
 
 
 CSS: str = """
-/* Onyx Amber — atmospheric layer that Gradio's theme can't express alone */
+/* Soft Dark Restraint — calm, single-accent decorations Gradio tokens can't express. */
 
-body, .gradio-container {
-    background-image: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,176,46,0.06), transparent 70%);
+/* Small dim link row under the model radio (Edit / Omni Base · coming soon). */
+.zis-soon-row {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #988B7C;
+    line-height: 1.45;
+}
+.zis-soon-row a {
+    color: #988B7C;
+    text-decoration: underline;
+    text-decoration-color: #3A3128;
+    text-underline-offset: 3px;
+}
+.zis-soon-row a:hover {
+    color: #F0E8DD;
+    text-decoration-color: #988B7C;
+}
+.zis-soon-row .sep {
+    margin: 0 6px;
+    color: #3A3128;
+}
+.zis-soon-row .dim {
+    margin-left: 6px;
+    color: #635A4E;
 }
 
-/* Amber glow on primary button */
-.gradio-container button.primary {
-    box-shadow: 0 0 0 1px rgba(255,176,46,0.4), 0 8px 24px -8px rgba(255,176,46,0.35);
-}
+/* Compact LoRA file widget — tighten Gradio's default 400px drop zone. */
+.zis-lora-file .upload-container { min-height: 56px !important; padding: 8px 12px !important; }
+.zis-lora-file .icon-wrap, .zis-lora-file svg { display: none !important; }
+.zis-lora-file .wrap > * { text-align: left; }
 
-/* Slim status line typography */
-.zis-status {
-    font-family: 'Geist Mono', ui-monospace, monospace;
-    font-size: 11px;
-    letter-spacing: 0.06em;
-    color: #A89478;
-}
+/* Brand period uses the accent — the only place the accent appears in chrome. */
+.zis-brand-period { color: #FFB02E; }
 
-/* LoRA file slot — solid amber border + slim icon when a file is loaded */
-.zis-lora.loaded {
-    border: 1px solid #FFB02E !important;
+/* Live-status dot — accent, matches the single-accent rule. */
+.zis-status-dot::before {
+    content: "";
+    display: inline-block;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #FFB02E;
+    margin-right: 6px;
+    vertical-align: middle;
 }
-
-/* ===== Param tooltip — (i) icon next to labels (spec § 4.6) ===== */
-
-.zis-row-label {
-    display: inline-flex; align-items: center;
-    font-size: 11px; color: #A89478; font-weight: 500;
-    margin-bottom: 6px;
-}
-.zis-info {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 12px; height: 12px;
-    font: italic 600 8px 'Geist', system-ui, sans-serif;
-    border: 1px solid #2A2218; border-radius: 50%;
-    color: #A89478; vertical-align: super;
-    margin-left: 3px; cursor: help; position: relative;
-    transition: border-color 0.12s, color 0.12s;
-}
-.zis-info:hover { border-color: #FFB02E; color: #FFB02E; }
-.zis-info::after {
-    content: attr(data-info);
-    position: absolute; bottom: 100%; left: 50%;
-    transform: translateX(-50%) translateY(-4px);
-    background: #1C170F; color: #FAF1E3;
-    border: 1px solid #2A2218; border-radius: 6px;
-    padding: 6px 10px;
-    font: 400 11px 'Geist', system-ui, sans-serif; line-height: 1.4;
-    width: 200px; white-space: normal;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.12s; z-index: 50;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-}
-.zis-info:hover::after, .zis-info.shown::after { opacity: 1; }
-
-/* Hidden state carrier — in DOM for JS targeting, invisible to users */
-.zis-hidden { display: none !important; }
-
-/* ===== Custom model selector — 2-col phone / 4-col tablet+ (spec § 4.7) ===== */
-
-.zis-models {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-@media (min-width: 768px) {
-    .zis-models { grid-template-columns: repeat(4, 1fr); }
-}
-.zis-model {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 12px;
-    border: 1px solid #2A2218; border-radius: 8px;
-    background: transparent; cursor: pointer;
-    color: #FAF1E3;
-    font: 500 12px 'Geist', system-ui, sans-serif;
-    text-decoration: none;
-    transition: opacity 0.15s, border-color 0.15s, background 0.15s;
-}
-.zis-model .dot {
-    width: 10px; height: 10px; border-radius: 50%;
-    border: 1px solid #2A2218; flex-shrink: 0;
-}
-.zis-model .name { flex: 1; text-align: left; }
-.zis-model.on {
-    background: #FFB02E; color: #1A1208; border-color: #FFB02E;
-}
-.zis-model.on .dot { background: #1A1208; border-color: #1A1208; }
-.zis-model.soon {
-    opacity: 0.55;
-    background: rgba(255,176,46,0.04);
-    border-style: dashed;
-    position: relative;
-}
-.zis-model.soon .name { color: #A89478; }
-.zis-model.soon .name .ext {
-    font-size: 10px; color: #FFB02E;
-    margin-left: 4px; vertical-align: super;
-}
-.zis-model.soon .soon-tag {
-    font-family: 'Geist Mono', ui-monospace, monospace;
-    font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase;
-    background: rgba(255,176,46,0.18); color: #FFB02E;
-    padding: 2px 6px; border-radius: 100px;
-    flex-shrink: 0;
-}
-.zis-model.soon:hover { opacity: 0.78; border-color: #FFB02E; }
-.zis-model.soon::after {
-    content: "Coming soon — opens GitHub";
-    position: absolute; bottom: 100%; left: 50%;
-    transform: translateX(-50%) translateY(-4px);
-    background: #1C170F; color: #FAF1E3;
-    border: 1px solid #2A2218; border-radius: 6px;
-    padding: 6px 10px;
-    font: 400 11px 'Geist', system-ui, sans-serif;
-    white-space: nowrap;
-    opacity: 0; pointer-events: none;
-    transition: opacity 0.12s; z-index: 50;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-}
-.zis-model.soon:hover::after { opacity: 1; }
 """.strip()

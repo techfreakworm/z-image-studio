@@ -1,68 +1,49 @@
+import gradio as gr
+
 import theme
 
 
-def test_amber_palette_tokens_match_spec():
-    pal = theme.AMBER
-    assert pal["body_bg"] == "#0F0C08"
-    assert pal["text"] == "#FAF1E3"
-    assert pal["text_dim"] == "#A89478"
-    assert pal["border"] == "#2A2218"
+def test_palette_tokens_match_soft_dark_restraint_spec():
+    pal = theme.PALETTE
+    assert pal["body_bg"] == "#1A1614"
+    assert pal["text"] == "#F0E8DD"
+    assert pal["text_dim"] == "#988B7C"
+    assert pal["border"] == "#2A241E"
     assert pal["accent"] == "#FFB02E"
     assert pal["accent_text"] == "#1A1208"
-    assert pal["radius"] == "8px"
+    assert pal["radius"] == "6px"
 
 
 def test_build_theme_returns_gradio_base():
-    import gradio as gr
-
     th = theme.build_theme()
     assert isinstance(th, gr.themes.Base)
 
 
-def test_css_string_contains_critical_selectors():
-    css = theme.CSS
-    # warm vignette + amber button glow are the two decorations the spec calls out
-    assert "radial-gradient" in css
-    assert "rgba(255,176,46" in css.lower() or "255, 176, 46" in css.lower()
-
-
-def test_fonts_geist_and_geist_mono():
+def test_theme_drops_mono_font():
+    """Redesign uses Inter only — no Geist / Geist Mono / mono custom font."""
     th = theme.build_theme()
-
-    # (a) Iterable lists: .font_list / .font_mono_list expose the original entries.
-    fonts = [str(f) for f in th.font_list]
-    assert any("Geist" in f for f in fonts)
-    monos = [str(f) for f in th.font_mono_list]
-    assert any("Geist Mono" in f for f in monos)
-
-    # (b) CSS variables: _get_theme_css() must emit --font and --font-mono that
-    #     reference Geist / Geist Mono so the browser actually loads the fonts.
-    #     This assertion is what catches the original bug where property setters
-    #     redirected self.font → font_str, causing --font-str to be emitted instead.
     css = th._get_theme_css()
-    assert "--font:" in css, "--font CSS variable missing from generated theme CSS"
-    assert "--font-mono:" in css, "--font-mono CSS variable missing from generated theme CSS"
-    assert "Geist" in css, "Geist font name missing from generated theme CSS"
-    assert "Geist Mono" in css, "Geist Mono font name missing from generated theme CSS"
+    assert "Geist" not in css
+    assert "Geist Mono" not in css
 
 
-def test_css_includes_param_tooltip_rule():
+def test_css_includes_soon_row_styling():
     css = theme.CSS
-    assert ".zis-info" in css
-    assert "data-info" in css  # attr() reference in ::after
-    assert "::after" in css
+    assert ".zis-soon-row" in css
+    assert ".zis-soon-row a" in css
 
 
-def test_css_includes_model_selector_rules():
+def test_css_includes_compact_lora_file_widget():
     css = theme.CSS
-    assert ".zis-models" in css
-    assert ".zis-model" in css
-    assert ".zis-model.on" in css
-    assert ".zis-model.soon" in css
+    assert ".zis-lora-file" in css
+    assert "min-height: 56px" in css
 
 
-def test_css_model_grid_is_responsive():
+def test_css_does_not_reference_deleted_selectors():
     css = theme.CSS
-    assert "grid-template-columns" in css
-    assert "@media" in css
-    assert "min-width: 768px" in css or "min-width:768px" in css
+    # Old (i) tooltip pattern is gone — info= flows through gr.* directly.
+    assert ".zis-info" not in css
+    # Old custom card grid is gone — gr.Radio replaces it.
+    assert ".zis-models" not in css
+    assert ".zis-model.on" not in css
+    assert ".zis-model.soon" not in css

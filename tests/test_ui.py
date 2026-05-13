@@ -4,48 +4,6 @@ import pytest
 import ui
 
 
-def test_labeled_label_returns_html_string():
-    out = ui.labeled_label("Steps", "Denoising steps.")
-    assert isinstance(out, str)
-    assert "<label" in out and "</label>" in out
-    assert ">Steps<" in out
-    assert 'data-info="Denoising steps."' in out
-    assert ">i<" in out  # the icon glyph
-
-
-def test_labeled_label_escapes_html_chars():
-    out = ui.labeled_label("Steps <x>", 'A "quoted" hint')
-    assert "<x>" not in out
-    assert "&lt;x&gt;" in out
-    assert "&quot;quoted&quot;" in out
-
-
-def test_model_selector_html_marks_current_as_on():
-    out = ui.model_selector_html(current="Turbo")
-    assert 'class="zis-model on" data-value="Turbo"' in out
-    assert 'class="zis-model" data-value="Base"' in out
-
-
-def test_model_selector_html_includes_both_soon_cards_with_github_link():
-    out = ui.model_selector_html(current="Turbo")
-    assert out.count("github.com/Tongyi-MAI/Z-Image#-model-zoo") == 2
-    assert "Edit" in out
-    assert "Omni Base" in out
-    assert "soon-tag" in out
-    assert 'target="_blank"' in out
-    assert 'rel="noopener noreferrer"' in out
-
-
-def test_model_selector_html_defaults_to_turbo():
-    out = ui.model_selector_html()
-    assert 'class="zis-model on" data-value="Turbo"' in out
-
-
-def test_model_selector_html_escapes_current_value():
-    out = ui.model_selector_html(current="<script>alert(1)</script>")
-    assert "<script>" not in out
-
-
 @pytest.fixture(autouse=True)
 def _blocks_ctx():
     """Each builder must be called inside a gr.Blocks() context."""
@@ -53,12 +11,29 @@ def _blocks_ctx():
         yield
 
 
+def test_model_soon_row_links_to_zoo_twice():
+    html = ui._model_soon_row_html()
+    assert html.count(ui.MODEL_ZOO_URL) == 2
+    assert "Edit" in html and "Omni Base" in html
+    assert "(coming soon)" in html
+    assert 'target="_blank"' in html
+    assert 'rel="noopener noreferrer"' in html
+
+
+def test_model_soon_row_uses_dim_link_class():
+    html = ui._model_soon_row_html()
+    assert 'class="zis-soon-row"' in html
+
+
 def test_build_t2i_tab_returns_components():
     components = ui.build_t2i_tab()
     expected = {
         "prompt",
         "negative_prompt",
-        "model_state",
+        "model",
+        "base_group",
+        "lora_enabled",
+        "lora_group",
         "steps",
         "cfg",
         "width",
@@ -73,15 +48,40 @@ def test_build_t2i_tab_returns_components():
     assert expected.issubset(components.keys())
 
 
+def test_build_t2i_tab_model_is_native_radio():
+    components = ui.build_t2i_tab()
+    assert isinstance(components["model"], gr.Radio)
+    assert components["model"].value == "Turbo"
+    # Confirm the radio carries both choices. Gradio stores them as (label, value)
+    # tuples on the .choices attribute.
+    values = [c[1] for c in components["model"].choices]
+    assert values == ["Base", "Turbo"]
+
+
+def test_build_t2i_tab_lora_group_starts_hidden():
+    components = ui.build_t2i_tab()
+    assert components["lora_group"].visible is False
+    assert components["lora_enabled"].value is False
+
+
+def test_build_t2i_tab_base_group_starts_hidden():
+    """Turbo is the default model, so the Base-only fields are hidden up front."""
+    components = ui.build_t2i_tab()
+    assert components["base_group"].visible is False
+
+
 def test_build_controlnet_tab_returns_components():
     components = ui.build_controlnet_tab()
     expected = {
         "prompt",
         "input_image",
+        "preview_image",
         "preprocessor",
         "controlnet_scale",
         "steps",
         "seed",
+        "lora_enabled",
+        "lora_group",
         "lora_path",
         "lora_strength",
         "generate_btn",
@@ -89,6 +89,12 @@ def test_build_controlnet_tab_returns_components():
         "output_meta",
     }
     assert expected.issubset(components.keys())
+
+
+def test_build_controlnet_tab_preview_is_non_interactive_image():
+    components = ui.build_controlnet_tab()
+    assert isinstance(components["preview_image"], gr.Image)
+    assert components["preview_image"].interactive is False
 
 
 def test_build_upscale_tab_returns_components():
@@ -99,6 +105,8 @@ def test_build_upscale_tab_returns_components():
         "refine_steps",
         "refine_denoise",
         "seed",
+        "lora_enabled",
+        "lora_group",
         "lora_path",
         "lora_strength",
         "generate_btn",

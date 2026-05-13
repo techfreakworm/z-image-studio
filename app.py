@@ -24,6 +24,7 @@ import gradio as gr
 import backend
 import lora as lora_mod
 import models
+import preprocessors
 import theme
 import ui
 
@@ -93,10 +94,24 @@ def _coerce_lora(lora_path: str | None) -> Path | None:
 
 
 def _on_model_change(model_name: str) -> tuple[int, float]:
-    """When the user clicks Base / Turbo in the custom selector, update steps + cfg."""
+    """When the user picks Base / Turbo in the radio, update steps + cfg defaults."""
     if model_name == "Base":
         return 25, 4.0
     return 8, 1.0  # Turbo
+
+
+def _preview_cn(image, mode):
+    """Render the live preprocessor preview next to the input on the ControlNet tab.
+
+    Wrapped in ``try/except`` so that a missing optional dep (controlnet_aux for
+    Depth / Pose) never breaks the form — it just falls back to the raw input.
+    """
+    if image is None:
+        return None
+    try:
+        return preprocessors.run(mode, image)
+    except Exception:
+        return image
 
 
 def _esrgan_path() -> str:
@@ -115,10 +130,13 @@ def on_t2i_generate(
     width,
     height,
     seed,
+    lora_enabled,
     lora_path,
     lora_strength,
     progress=gr.Progress(track_tqdm=True),  # noqa: B008
 ):
+    if not lora_enabled:
+        lora_path = None
     try:
         lora_p = _coerce_lora(lora_path)
     except lora_mod.LoRAValidationError as e:
@@ -147,10 +165,13 @@ def on_controlnet_generate(
     controlnet_scale,
     steps,
     seed,
+    lora_enabled,
     lora_path,
     lora_strength,
     progress=gr.Progress(track_tqdm=True),  # noqa: B008
 ):
+    if not lora_enabled:
+        lora_path = None
     try:
         lora_p = _coerce_lora(lora_path)
     except lora_mod.LoRAValidationError as e:
@@ -176,10 +197,13 @@ def on_upscale_generate(
     refine_steps,
     refine_denoise,
     seed,
+    lora_enabled,
     lora_path,
     lora_strength,
     progress=gr.Progress(track_tqdm=True),  # noqa: B008
 ):
+    if not lora_enabled:
+        lora_path = None
     try:
         lora_p = _coerce_lora(lora_path)
     except lora_mod.LoRAValidationError as e:
@@ -203,42 +227,16 @@ def on_upscale_generate(
 
 HEADER_HTML = """
 <div style="display:flex;justify-content:space-between;align-items:baseline;padding:8px 0 4px 0;">
-  <div style="font-family:'Geist',sans-serif;font-size:16px;font-weight:600;letter-spacing:-0.02em;">
-    z<span style="color:#FFB02E;">·</span>image studio
+  <div style="font-size:16px;font-weight:600;letter-spacing:-0.01em;">
+    z-image-studio<span class="zis-brand-period">.</span>
   </div>
-  <div class="zis-status">ready</div>
+  <div class="zis-status-dot" style="font-size:11px;color:#988B7C;letter-spacing:0.02em;">ready</div>
 </div>
 """.strip()
 
 
-_HEAD_JS = """
-<script>
-window.zis = {
-    setModel: function(name) {
-        document.querySelectorAll('.zis-model').forEach(el => {
-            el.classList.toggle('on', el.dataset.value === name);
-        });
-        const hidden = document.querySelector('#zis-model-state textarea, #zis-model-state input');
-        if (hidden) {
-            hidden.value = name;
-            hidden.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-    }
-};
-// Tap-to-pin tooltips on mobile
-document.addEventListener('touchstart', function(e) {
-    const tip = e.target.closest('.zis-info');
-    document.querySelectorAll('.zis-info.shown').forEach(el => {
-        if (el !== tip) el.classList.remove('shown');
-    });
-    if (tip) tip.classList.toggle('shown');
-}, { passive: true });
-</script>
-""".strip()
-
-
 def build_app() -> gr.Blocks:
-    with gr.Blocks(theme=theme.build_theme(), css=theme.CSS, head=_HEAD_JS, title="z-image-studio") as demo:
+    with gr.Blocks(theme=theme.build_theme(), css=theme.CSS, title="z-image-studio") as demo:
         gr.HTML(HEADER_HTML)
 
         with gr.Tabs():
@@ -249,21 +247,34 @@ def build_app() -> gr.Blocks:
                     inputs=[
                         t["prompt"],
                         t["negative_prompt"],
-                        t["model_state"],
+                        t["model"],
                         t["steps"],
                         t["cfg"],
                         t["width"],
                         t["height"],
                         t["seed"],
+                        t["lora_enabled"],
                         t["lora_path"],
                         t["lora_strength"],
                     ],
                     outputs=[t["output_image"], t["output_meta"]],
                 )
-                t["model_state"].change(
+                # Radio change → update step / cfg defaults + reveal Base-only fields.
+                t["model"].change(
                     fn=_on_model_change,
-                    inputs=[t["model_state"]],
+                    inputs=[t["model"]],
                     outputs=[t["steps"], t["cfg"]],
+                )
+                t["model"].change(
+                    fn=lambda m: gr.Group(visible=(m == "Base")),
+                    inputs=[t["model"]],
+                    outputs=[t["base_group"]],
+                )
+                # LoRA checkbox → reveal file + strength.
+                t["lora_enabled"].change(
+                    fn=lambda v: gr.Group(visible=v),
+                    inputs=[t["lora_enabled"]],
+                    outputs=[t["lora_group"]],
                 )
 
             with gr.Tab("ControlNet"):
@@ -277,10 +288,28 @@ def build_app() -> gr.Blocks:
                         c["controlnet_scale"],
                         c["steps"],
                         c["seed"],
+                        c["lora_enabled"],
                         c["lora_path"],
                         c["lora_strength"],
                     ],
                     outputs=[c["output_image"], c["output_meta"]],
+                )
+                # Live preprocessor preview — fires on input change or mode change.
+                c["input_image"].change(
+                    fn=_preview_cn,
+                    inputs=[c["input_image"], c["preprocessor"]],
+                    outputs=[c["preview_image"]],
+                )
+                c["preprocessor"].change(
+                    fn=_preview_cn,
+                    inputs=[c["input_image"], c["preprocessor"]],
+                    outputs=[c["preview_image"]],
+                )
+                # LoRA checkbox → reveal file + strength.
+                c["lora_enabled"].change(
+                    fn=lambda v: gr.Group(visible=v),
+                    inputs=[c["lora_enabled"]],
+                    outputs=[c["lora_group"]],
                 )
 
             with gr.Tab("Upscale"):
@@ -293,10 +322,16 @@ def build_app() -> gr.Blocks:
                         u["refine_steps"],
                         u["refine_denoise"],
                         u["seed"],
+                        u["lora_enabled"],
                         u["lora_path"],
                         u["lora_strength"],
                     ],
                     outputs=[u["output_image"], u["output_meta"]],
+                )
+                u["lora_enabled"].change(
+                    fn=lambda v: gr.Group(visible=v),
+                    inputs=[u["lora_enabled"]],
+                    outputs=[u["lora_group"]],
                 )
     return demo
 

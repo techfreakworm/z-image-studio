@@ -1,109 +1,118 @@
-"""Gradio UI builders + small HTML helpers for the (i) tooltip pattern and the custom model selector."""
+"""Gradio UI builders for z-image-studio (Soft Dark Restraint redesign).
+
+Each ``build_*_tab()`` returns a dict of components so ``app.py:build_app``
+can wire ``.click()`` / ``.change()`` handlers without reaching into local
+scopes. All param help text flows through Gradio's native ``info=`` parameter
+(dim subtitle under each label) — no custom popover or (i) icon helper.
+"""
 
 from __future__ import annotations
-
-from html import escape
 
 import gradio as gr
 
 import preprocessors
 from tooltips import TOOLTIPS
 
-GITHUB_MODEL_ZOO_URL = "https://github.com/Tongyi-MAI/Z-Image#-model-zoo"
+# Link targets for the small dim row under the model radio. The Z-Image
+# README's Model Zoo section is the canonical "where to find more models"
+# anchor; Omni Base lives in the same README. When more models ship, swap
+# these constants and nothing else needs to change.
+MODEL_ZOO_URL = "https://github.com/Tongyi-MAI/Z-Image#-model-zoo"
 
 
-def labeled_label(text: str, info_text: str) -> str:
-    """Return HTML for a label with an (i) tooltip icon next to it.
+def _model_soon_row_html() -> str:
+    """Return the small dim link row that lives directly under the model radio.
 
-    Use immediately before a ``gr.Slider`` / ``gr.Textbox`` / ``gr.File`` etc.
-    that itself has ``show_label=False``. The CSS for ``.zis-row-label`` and
-    ``.zis-info`` is defined in :mod:`theme`.
+    Two anchor links + a "(coming soon)" qualifier. Static — no state, no JS.
     """
     return (
-        f'<label class="zis-row-label">{escape(text)}'
-        f'<span class="zis-info" data-info="{escape(info_text)}">i</span>'
-        f"</label>"
+        '<div class="zis-soon-row">'
+        f'<a href="{MODEL_ZOO_URL}" target="_blank" rel="noopener noreferrer">Edit ↗</a>'
+        '<span class="sep">·</span>'
+        f'<a href="{MODEL_ZOO_URL}" target="_blank" rel="noopener noreferrer">Omni Base ↗</a>'
+        '<span class="dim">(coming soon)</span>'
+        "</div>"
     )
-
-
-def model_selector_html(current: str = "Turbo") -> str:
-    """Custom T2I model selector — 2-col phone / 4-col tablet+ grid of cards.
-
-    Two functional ``<button>`` cards (Base, Turbo) — clicks fire
-    ``zis.setModel('<name>')`` defined in app.py's ``head=`` script.
-
-    Two coming-soon ``<a>`` cards (Edit, Omni Base) — open the Z-Image GitHub
-    README's Model Zoo section in a new tab. Marked with a `.soon` class and a
-    "soon" pill that doesn't overlap the model name (separate flex children).
-    """
-    current_safe = escape(current)
-    cards: list[str] = []
-    for name in ("Base", "Turbo"):
-        cls = "zis-model on" if name == current else "zis-model"
-        cards.append(
-            f'<button type="button" class="{cls}" data-value="{name}" '
-            f"onclick=\"zis.setModel('{name}')\">"
-            f'<span class="dot"></span>'
-            f'<span class="name">{name}</span>'
-            f"</button>"
-        )
-    for name in ("Edit", "Omni Base"):
-        cards.append(
-            f'<a class="zis-model soon" '
-            f'href="{GITHUB_MODEL_ZOO_URL}" '
-            f'target="_blank" rel="noopener noreferrer">'
-            f'<span class="dot"></span>'
-            f'<span class="name">{name}<span class="ext">↗</span></span>'
-            f'<span class="soon-tag">soon</span>'
-            f"</a>"
-        )
-    _ = current_safe  # current is matched in cls above; this line keeps escape() exercised
-    return f'<div class="zis-models">{"".join(cards)}</div>'
 
 
 def build_t2i_tab() -> dict[str, gr.components.Component]:
     with gr.Row():
         with gr.Column(scale=4):
-            gr.HTML(labeled_label("Prompt", TOOLTIPS["prompt"]))
-            prompt = gr.Textbox(lines=4, show_label=False, placeholder="A latina model peeking through pine branches…")
-            gr.HTML(labeled_label("Negative prompt (Base only)", TOOLTIPS["negative_prompt"]))
-            negative_prompt = gr.Textbox(lines=2, show_label=False, placeholder="blurry, lowres, distorted")
-            gr.HTML(labeled_label("Model", TOOLTIPS["model"]))
-            model_state = gr.Textbox(value="Turbo", elem_id="zis-model-state", elem_classes=["zis-hidden"])
-            gr.HTML(model_selector_html(current="Turbo"))
-            with gr.Row():
-                with gr.Column():
-                    gr.HTML(labeled_label("LoRA (optional)", TOOLTIPS["lora"]))
-                    lora_path = gr.File(file_types=[".safetensors"], type="filepath", show_label=False)
-                with gr.Column():
-                    gr.HTML(labeled_label("LoRA strength", TOOLTIPS["lora_strength"]))
-                    lora_strength = gr.Slider(0.0, 1.5, value=0.8, step=0.05, show_label=False)
-            with gr.Row():
-                with gr.Column():
-                    gr.HTML(labeled_label("Steps", TOOLTIPS["steps"]))
-                    steps = gr.Slider(1, 50, value=8, step=1, show_label=False)
-                with gr.Column():
-                    gr.HTML(labeled_label("CFG (Base only)", TOOLTIPS["cfg"]))
-                    cfg = gr.Slider(0.5, 12.0, value=1.0, step=0.1, show_label=False)
-            with gr.Row():
-                with gr.Column():
-                    gr.HTML(labeled_label("Width", TOOLTIPS["width"]))
-                    width = gr.Slider(384, 1536, value=1024, step=64, show_label=False)
-                with gr.Column():
-                    gr.HTML(labeled_label("Height", TOOLTIPS["height"]))
-                    height = gr.Slider(384, 1536, value=1024, step=64, show_label=False)
-                with gr.Column():
-                    gr.HTML(labeled_label("Seed (0 = random)", TOOLTIPS["seed"]))
-                    seed = gr.Number(value=0, precision=0, show_label=False)
+            prompt = gr.Textbox(
+                label="Prompt",
+                info=TOOLTIPS["prompt"],
+                lines=4,
+                placeholder="A latina model peeking through pine branches…",
+            )
+
+            model = gr.Radio(
+                ["Base", "Turbo"],
+                value="Turbo",
+                label="Model",
+                info=TOOLTIPS["model"],
+            )
+            model_soon_row = gr.HTML(_model_soon_row_html())
+
+            with gr.Group(visible=False) as base_group:
+                negative_prompt = gr.Textbox(
+                    label="Negative prompt",
+                    info=TOOLTIPS["negative_prompt"],
+                    lines=2,
+                    placeholder="blurry, lowres, distorted",
+                )
+                cfg = gr.Slider(
+                    0.5,
+                    12.0,
+                    value=1.0,
+                    step=0.1,
+                    label="CFG",
+                    info=TOOLTIPS["cfg"],
+                )
+
+            lora_enabled = gr.Checkbox(label="Use a LoRA", value=False)
+            with gr.Group(visible=False) as lora_group:
+                lora_path = gr.File(
+                    label="LoRA file",
+                    file_types=[".safetensors"],
+                    type="filepath",
+                    elem_classes=["zis-lora-file"],
+                )
+                lora_strength = gr.Slider(
+                    0.0,
+                    1.5,
+                    value=0.8,
+                    step=0.05,
+                    label="LoRA strength",
+                    info=TOOLTIPS["lora_strength"],
+                )
+
+            steps = gr.Slider(1, 50, value=8, step=1, label="Steps", info=TOOLTIPS["steps"])
+
+            with gr.Accordion("Advanced", open=False):
+                width = gr.Slider(384, 1536, value=1024, step=64, label="Width", info=TOOLTIPS["width"])
+                height = gr.Slider(384, 1536, value=1024, step=64, label="Height", info=TOOLTIPS["height"])
+                seed = gr.Number(value=0, precision=0, label="Seed", info=TOOLTIPS["seed"])
+
             generate_btn = gr.Button("Generate", variant="primary")
+
         with gr.Column(scale=5):
-            gr.HTML(labeled_label("Output", TOOLTIPS["output"]))
-            output_image = gr.Image(type="pil", height=512, show_download_button=True, show_label=False)
+            gr.Markdown(f"**Output**  \n<span style='color:#988B7C;font-size:12px;'>{TOOLTIPS['output']}</span>")
+            output_image = gr.Image(
+                show_label=False,
+                type="pil",
+                height=512,
+                show_download_button=True,
+            )
             output_meta = gr.JSON(label="Meta", value={})
+
     return dict(
         prompt=prompt,
         negative_prompt=negative_prompt,
-        model_state=model_state,
+        model=model,
+        model_soon_row=model_soon_row,
+        base_group=base_group,
+        lora_enabled=lora_enabled,
+        lora_group=lora_group,
         steps=steps,
         cfg=cfg,
         width=width,
@@ -120,43 +129,95 @@ def build_t2i_tab() -> dict[str, gr.components.Component]:
 def build_controlnet_tab() -> dict[str, gr.components.Component]:
     with gr.Row():
         with gr.Column(scale=4):
-            gr.HTML(labeled_label("Prompt", TOOLTIPS["prompt"]))
-            prompt = gr.Textbox(lines=3, show_label=False)
-            gr.HTML(labeled_label("Control image", TOOLTIPS["controlnet_image"]))
-            input_image = gr.Image(type="pil", height=240, show_label=False)
+            prompt = gr.Textbox(
+                label="Prompt",
+                info=TOOLTIPS["prompt"],
+                lines=3,
+            )
+
             with gr.Row():
                 with gr.Column():
-                    gr.HTML(labeled_label("Preprocessor", TOOLTIPS["controlnet_preprocessor"]))
-                    preprocessor = gr.Dropdown(list(preprocessors.MODES), value="Canny", show_label=False)
+                    gr.Markdown(
+                        f"**Control image**  \n<span style='color:#988B7C;font-size:12px;'>"
+                        f"{TOOLTIPS['controlnet_image']}</span>"
+                    )
+                    input_image = gr.Image(
+                        show_label=False,
+                        type="pil",
+                        height=240,
+                    )
                 with gr.Column():
-                    gr.HTML(labeled_label("ControlNet scale", TOOLTIPS["controlnet_scale"]))
-                    controlnet_scale = gr.Slider(0.0, 2.0, value=1.0, step=0.05, show_label=False)
+                    gr.Markdown(
+                        "**Preprocessor preview**  \n<span style='color:#988B7C;font-size:12px;'>"
+                        "Live edge map / depth map / pose. Updates as you change the preprocessor.</span>"
+                    )
+                    preview_image = gr.Image(
+                        show_label=False,
+                        type="pil",
+                        height=240,
+                        interactive=False,
+                    )
+
             with gr.Row():
-                with gr.Column():
-                    gr.HTML(labeled_label("LoRA (optional)", TOOLTIPS["lora"]))
-                    lora_path = gr.File(file_types=[".safetensors"], type="filepath", show_label=False)
-                with gr.Column():
-                    gr.HTML(labeled_label("LoRA strength", TOOLTIPS["lora_strength"]))
-                    lora_strength = gr.Slider(0.0, 1.5, value=0.8, step=0.05, show_label=False)
-            with gr.Row():
-                with gr.Column():
-                    gr.HTML(labeled_label("Steps", TOOLTIPS["steps"]))
-                    steps = gr.Slider(1, 30, value=9, step=1, show_label=False)
-                with gr.Column():
-                    gr.HTML(labeled_label("Seed (0 = random)", TOOLTIPS["seed"]))
-                    seed = gr.Number(value=0, precision=0, show_label=False)
+                preprocessor = gr.Dropdown(
+                    list(preprocessors.MODES),
+                    value="Canny",
+                    label="Preprocessor",
+                    info=TOOLTIPS["controlnet_preprocessor"],
+                )
+                controlnet_scale = gr.Slider(
+                    0.0,
+                    2.0,
+                    value=1.0,
+                    step=0.05,
+                    label="ControlNet scale",
+                    info=TOOLTIPS["controlnet_scale"],
+                )
+
+            lora_enabled = gr.Checkbox(label="Use a LoRA", value=False)
+            with gr.Group(visible=False) as lora_group:
+                lora_path = gr.File(
+                    label="LoRA file",
+                    file_types=[".safetensors"],
+                    type="filepath",
+                    elem_classes=["zis-lora-file"],
+                )
+                lora_strength = gr.Slider(
+                    0.0,
+                    1.5,
+                    value=0.8,
+                    step=0.05,
+                    label="LoRA strength",
+                    info=TOOLTIPS["lora_strength"],
+                )
+
+            steps = gr.Slider(1, 30, value=9, step=1, label="Steps", info=TOOLTIPS["steps"])
+
+            with gr.Accordion("Advanced", open=False):
+                seed = gr.Number(value=0, precision=0, label="Seed", info=TOOLTIPS["seed"])
+
             generate_btn = gr.Button("Generate", variant="primary")
+
         with gr.Column(scale=5):
-            gr.HTML(labeled_label("Output", TOOLTIPS["output"]))
-            output_image = gr.Image(type="pil", height=512, show_download_button=True, show_label=False)
+            gr.Markdown(f"**Output**  \n<span style='color:#988B7C;font-size:12px;'>{TOOLTIPS['output']}</span>")
+            output_image = gr.Image(
+                show_label=False,
+                type="pil",
+                height=512,
+                show_download_button=True,
+            )
             output_meta = gr.JSON(label="Meta", value={})
+
     return dict(
         prompt=prompt,
         input_image=input_image,
+        preview_image=preview_image,
         preprocessor=preprocessor,
         controlnet_scale=controlnet_scale,
         steps=steps,
         seed=seed,
+        lora_enabled=lora_enabled,
+        lora_group=lora_group,
         lora_path=lora_path,
         lora_strength=lora_strength,
         generate_btn=generate_btn,
@@ -168,37 +229,81 @@ def build_controlnet_tab() -> dict[str, gr.components.Component]:
 def build_upscale_tab() -> dict[str, gr.components.Component]:
     with gr.Row():
         with gr.Column(scale=4):
-            gr.HTML(labeled_label("Refinement prompt", TOOLTIPS["prompt"]))
-            prompt = gr.Textbox(value="masterpiece, 8k", lines=2, show_label=False)
-            gr.HTML(labeled_label("Input image", TOOLTIPS["upscale_image"]))
-            input_image = gr.Image(type="pil", height=240, show_label=False)
+            prompt = gr.Textbox(
+                label="Refinement prompt",
+                info=TOOLTIPS["prompt"],
+                value="masterpiece, 8k",
+                lines=2,
+            )
+            gr.Markdown(
+                f"**Input image**  \n<span style='color:#988B7C;font-size:12px;'>{TOOLTIPS['upscale_image']}</span>"
+            )
+            input_image = gr.Image(
+                show_label=False,
+                type="pil",
+                height=240,
+            )
+
             with gr.Row():
-                with gr.Column():
-                    gr.HTML(labeled_label("Refine steps", TOOLTIPS["refine_steps"]))
-                    refine_steps = gr.Slider(1, 20, value=5, step=1, show_label=False)
-                with gr.Column():
-                    gr.HTML(labeled_label("Refine denoise", TOOLTIPS["refine_denoise"]))
-                    refine_denoise = gr.Slider(0.0, 1.0, value=0.33, step=0.01, show_label=False)
-            with gr.Row():
-                with gr.Column():
-                    gr.HTML(labeled_label("LoRA (optional)", TOOLTIPS["lora"]))
-                    lora_path = gr.File(file_types=[".safetensors"], type="filepath", show_label=False)
-                with gr.Column():
-                    gr.HTML(labeled_label("LoRA strength", TOOLTIPS["lora_strength"]))
-                    lora_strength = gr.Slider(0.0, 1.5, value=0.8, step=0.05, show_label=False)
-            gr.HTML(labeled_label("Seed (0 = random)", TOOLTIPS["seed"]))
-            seed = gr.Number(value=0, precision=0, show_label=False)
+                refine_steps = gr.Slider(
+                    1,
+                    20,
+                    value=5,
+                    step=1,
+                    label="Refine steps",
+                    info=TOOLTIPS["refine_steps"],
+                )
+                refine_denoise = gr.Slider(
+                    0.0,
+                    1.0,
+                    value=0.33,
+                    step=0.01,
+                    label="Refine denoise",
+                    info=TOOLTIPS["refine_denoise"],
+                )
+
+            lora_enabled = gr.Checkbox(label="Use a LoRA", value=False)
+            with gr.Group(visible=False) as lora_group:
+                lora_path = gr.File(
+                    label="LoRA file",
+                    file_types=[".safetensors"],
+                    type="filepath",
+                    elem_classes=["zis-lora-file"],
+                )
+                lora_strength = gr.Slider(
+                    0.0,
+                    1.5,
+                    value=0.8,
+                    step=0.05,
+                    label="LoRA strength",
+                    info=TOOLTIPS["lora_strength"],
+                )
+
+            with gr.Accordion("Advanced", open=False):
+                seed = gr.Number(value=0, precision=0, label="Seed", info=TOOLTIPS["seed"])
+
             generate_btn = gr.Button("Generate", variant="primary")
+
         with gr.Column(scale=5):
-            gr.HTML(labeled_label("Output (2x upscaled)", TOOLTIPS["output"]))
-            output_image = gr.Image(type="pil", height=512, show_download_button=True, show_label=False)
+            gr.Markdown(
+                f"**Output (2x upscaled)**  \n<span style='color:#988B7C;font-size:12px;'>{TOOLTIPS['output']}</span>"
+            )
+            output_image = gr.Image(
+                show_label=False,
+                type="pil",
+                height=512,
+                show_download_button=True,
+            )
             output_meta = gr.JSON(label="Meta", value={})
+
     return dict(
         prompt=prompt,
         input_image=input_image,
         refine_steps=refine_steps,
         refine_denoise=refine_denoise,
         seed=seed,
+        lora_enabled=lora_enabled,
+        lora_group=lora_group,
         lora_path=lora_path,
         lora_strength=lora_strength,
         generate_btn=generate_btn,
