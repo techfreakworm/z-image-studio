@@ -7,6 +7,17 @@ from typing import Any, TypedDict
 from PIL import Image
 
 import lora
+import preprocessors
+
+try:
+    from diffsynth.diffusion.base_pipeline import ControlNetInput
+except ImportError:
+    from dataclasses import dataclass
+
+    @dataclass
+    class ControlNetInput:  # type: ignore[no-redef]
+        image: Any
+        scale: float = 1.0
 
 
 class T2IParams(TypedDict, total=False):
@@ -56,6 +67,45 @@ def call_t2i(pipe: Any, params: T2IParams) -> tuple[Image.Image, dict[str, Any]]
     meta = dict(
         mode="t2i", model=model_name,
         steps=kwargs["num_inference_steps"], cfg=kwargs["cfg_scale"],
+        seed=kwargs["seed"], width=kwargs["width"], height=kwargs["height"],
+        lora=str(params.get("lora_path")) if params.get("lora_path") else None,
+        lora_strength=params.get("lora_strength", 0.0),
+    )
+    return image, meta
+
+
+def call_controlnet(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dict[str, Any]]:
+    """ControlNet — Turbo + Z-Image-Turbo-Fun-Controlnet-Union-2.1."""
+    input_image: Image.Image | None = params.get("input_image")
+    if input_image is None:
+        raise ValueError("ControlNet mode requires an input image")
+
+    preproc_mode = params.get("preprocessor", "Canny")
+    control_image = preprocessors.run(preproc_mode, input_image)
+
+    _swap_transformer(pipe, "Turbo")
+
+    cn_input = ControlNetInput(image=control_image, scale=float(params.get("controlnet_scale", 1.0)))
+
+    kwargs: dict[str, Any] = dict(
+        prompt=params["prompt"],
+        cfg_scale=1.0,
+        num_inference_steps=int(params.get("steps", 9)),
+        sigma_shift=3.0,
+        height=control_image.size[1],
+        width=control_image.size[0],
+        seed=int(params.get("seed", 0)),
+        controlnet_inputs=[cn_input],
+    )
+
+    with lora.applied_lora(pipe, params.get("lora_path"), params.get("lora_strength", 0.0)):
+        image = pipe(**kwargs)
+
+    meta = dict(
+        mode="controlnet", model="Turbo",
+        preprocessor=preproc_mode,
+        controlnet_scale=cn_input.scale,
+        steps=kwargs["num_inference_steps"], cfg=1.0,
         seed=kwargs["seed"], width=kwargs["width"], height=kwargs["height"],
         lora=str(params.get("lora_path")) if params.get("lora_path") else None,
         lora_strength=params.get("lora_strength", 0.0),
