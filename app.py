@@ -10,10 +10,14 @@ import os
 import random
 from pathlib import Path
 
+# DiffSynth defaults to ModelScope; force HF so preload_from_hub + HF cache work.
+# Must be set before any diffsynth import path is taken (backend imports it lazily).
+os.environ.setdefault("DIFFSYNTH_DOWNLOAD_SOURCE", "huggingface")
+
 import gradio as gr
 
 import backend
-import lora as lora_mod  # avoid shadowing the gr.File `lora_path` name
+import lora as lora_mod
 import models
 import theme
 import ui
@@ -21,15 +25,36 @@ import ui
 # ----- HF Spaces bootstrap ---------------------------------------------------
 
 
+_REPO_ROOT = Path(__file__).resolve().parent
+_DIFFSYNTH_MODELS_DIR = _REPO_ROOT / "models"
+
+
 def _bootstrap() -> None:
-    """Mirror the preload_from_hub cache once, then point HF env at the mirror."""
-    if not models.on_spaces():
-        return
-    src = Path(os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface")))
-    dst = Path.home() / "hf-cache-rw"
-    models.mirror_preload_hf_cache(src, dst)
-    os.environ["HF_HOME"] = str(dst)
-    os.environ["HF_HUB_CACHE"] = str(dst / "hub")
+    """Mirror the preload_from_hub cache, then symlink snapshots into DiffSynth's
+    expected ``./models/<repo>/`` layout so the pipeline reuses preloaded weights
+    instead of re-downloading on first call.
+
+    On Spaces: cache is read-only owned by the build user → mirror to ~/hf-cache-rw
+    first, then point HF env there, then symlink into ./models.
+
+    Locally: skip the mirror (we own the dirs); just symlink from the user's HF
+    cache to ./models so DiffSynth finds the snapshots.
+    """
+    if models.on_spaces():
+        src = Path(os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface")))
+        dst = Path.home() / "hf-cache-rw"
+        models.mirror_preload_hf_cache(src, dst)
+        os.environ["HF_HOME"] = str(dst)
+        os.environ["HF_HUB_CACHE"] = str(dst / "hub")
+        cache_hub = dst / "hub"
+    else:
+        cache_hub = Path(os.environ.get("HF_HUB_CACHE", str(Path.home() / ".cache" / "huggingface" / "hub")))
+
+    # Point DiffSynth at our project-local models dir + symlink every cached
+    # snapshot so DiffSynth's ModelConfig finds them without re-downloading.
+    os.environ.setdefault("DIFFSYNTH_MODEL_BASE_PATH", str(_DIFFSYNTH_MODELS_DIR))
+    _DIFFSYNTH_MODELS_DIR.mkdir(exist_ok=True)
+    models.symlink_hf_cache_to_diffsynth_layout(cache_hub, _DIFFSYNTH_MODELS_DIR)
 
 
 _bootstrap()

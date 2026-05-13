@@ -77,7 +77,7 @@ MODEL_CONFIGS: tuple[ModelConfig, ...] = (
     ModelConfig("Tongyi-MAI/Z-Image-Turbo", "transformer/*.safetensors", "Z-Image-Turbo transformer (8 steps, cfg=1)"),
     # ControlNet Union 2.1 (eager preload per spec; can move to lazy if RAM is tight)
     ModelConfig(
-        "PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1",
+        "alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union-2.1",
         "Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors",
         "ControlNet Union 2.1 — canny/depth/pose",
     ),
@@ -151,3 +151,49 @@ def mirror_preload_hf_cache(src_root: Path | str, dst_root: Path | str) -> None:
                     dst_path.symlink_to(src_path)
                 else:
                     raise
+
+
+def symlink_hf_cache_to_diffsynth_layout(cache_hub: Path | str, dest_root: Path | str) -> list[str]:
+    """For each ``models--<org>--<repo>`` under ``cache_hub``, symlink the latest snapshot
+    dir to ``dest_root/<org>/<repo>/`` — the layout DiffSynth's ModelConfig expects.
+
+    DiffSynth's ``download()`` joins ``local_model_path`` with ``model_id`` and either
+    finds matching files (skipping download) or fetches them. Putting symlinks at the
+    expected location lets DiffSynth reuse our HF-cache snapshots instead of re-downloading.
+
+    Returns the list of dest paths created. Idempotent: existing valid symlinks are kept.
+    """
+    cache_hub = Path(cache_hub)
+    dest_root = Path(dest_root)
+    if not cache_hub.is_dir():
+        return []
+
+    created: list[str] = []
+    for entry in sorted(cache_hub.iterdir()):
+        if not entry.is_dir() or not entry.name.startswith("models--"):
+            continue
+        # "models--Tongyi-MAI--Z-Image-Turbo" -> ("Tongyi-MAI", "Z-Image-Turbo")
+        # Some repos contain "--" in their name; only split off the first segment.
+        rest = entry.name[len("models--") :]
+        parts = rest.split("--", 1)
+        if len(parts) != 2:
+            continue
+        org, repo = parts
+
+        snapshots = entry / "snapshots"
+        if not snapshots.is_dir():
+            continue
+        sha_dirs = [d for d in snapshots.iterdir() if d.is_dir()]
+        if not sha_dirs:
+            continue
+        # Newest by mtime — usually the only one for our preload + first-fetch flow.
+        sha_dirs.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+        snap = sha_dirs[0]
+
+        link = dest_root / org / repo
+        if link.is_symlink() or link.exists():
+            continue
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(snap)
+        created.append(str(link))
+    return created

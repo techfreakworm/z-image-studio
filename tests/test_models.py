@@ -25,7 +25,7 @@ def test_model_configs_contains_both_transformers():
     repos = {c.model_id for c in configs}
     assert "Tongyi-MAI/Z-Image" in repos
     assert "Tongyi-MAI/Z-Image-Turbo" in repos
-    assert "PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1" in repos
+    assert "alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union-2.1" in repos
 
 
 def test_vram_limit_for_cuda_is_reasonable():

@@ -12,7 +12,7 @@ hf_oauth: false
 preload_from_hub:
   - Tongyi-MAI/Z-Image transformer/diffusion_pytorch_model.safetensors,text_encoder/*.safetensors,vae/diffusion_pytorch_model.safetensors,tokenizer/*
   - Tongyi-MAI/Z-Image-Turbo transformer/diffusion_pytorch_model.safetensors
-  - PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1 Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors
+  - alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union-2.1 Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors
   - lllyasviel/Annotators RealESRGAN_x4plus.pth
 ---
 

@@ -69,7 +69,7 @@ All three modes go through one `ZImagePipeline.__call__`. Mode-specific code is 
 | --- | --- | --- | --- |
 | **T2I (Base)** | `Tongyi-MAI/Z-Image` | `pipe(prompt, negative_prompt, cfg_scale=4.0, num_inference_steps=25, sigma_shift=3.0, height, width, seed)` | `image_z_image.json` |
 | **T2I (Turbo)** | `Tongyi-MAI/Z-Image-Turbo` | `pipe(prompt, cfg_scale=1.0, num_inference_steps=8, sigma_shift=3.0, height, width, seed)` | `image_z_image_turbo.json` |
-| **ControlNet** | Turbo + `PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1` | `pipe(prompt, controlnet_inputs=[ControlNetInput(image=preprocessed, scale)], cfg_scale=1.0, num_inference_steps=9, sigma_shift=3.0)` | `image_z_image_turbo_fun_union_controlnet.json` |
+| **ControlNet** | Turbo + `alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union-2.1` | `pipe(prompt, controlnet_inputs=[ControlNetInput(image=preprocessed, scale)], cfg_scale=1.0, num_inference_steps=9, sigma_shift=3.0)` | `image_z_image_turbo_fun_union_controlnet.json` |
 | **Upscale** | Turbo + RealESRGAN_x4plus | `RealESRGAN_x4(input) → PIL.resize 0.5 → pipe(prompt="masterpiece, 8k", input_image=upscaled, denoising_strength=0.33, num_inference_steps=5, cfg_scale=1.0, sigma_shift=3.0)` | `utility_z_image_turbo_2k_upscaler.json` |
 
 **LoRA wiring:** validated `safetensors` file + `gr.Slider(0.0, 1.5, value=0.8)` strength. Applied via DiffSynth's `merge_lora` inside an apply/revert context manager so the cached GPU model returns to a clean state after each request. Safetensors header sniffed before `@spaces.GPU` fires to reject mismatched LoRAs with a clear error (no GPU slot wasted).
@@ -335,7 +335,7 @@ hf_oauth: false
 preload_from_hub:
   - Tongyi-MAI/Z-Image transformer/diffusion_pytorch_model.safetensors,text_encoder/*.safetensors,vae/diffusion_pytorch_model.safetensors,tokenizer/*
   - Tongyi-MAI/Z-Image-Turbo transformer/diffusion_pytorch_model.safetensors
-  - PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1 Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors
+  - alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union-2.1 Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors
   - lllyasviel/Annotators RealESRGAN_x4plus.pth
 ---
 ```
@@ -371,7 +371,7 @@ pipe = ZImagePipeline.from_pretrained(
         ModelConfig(model_id="Tongyi-MAI/Z-Image", origin_file_pattern="vae/diffusion_pytorch_model.safetensors", **vram_cfg),
         # ControlNet — eager preload at boot to avoid first-ControlNet-call wait.
         # If startup RAM becomes tight on Spaces, move this to a lazy-load on first ControlNet request.
-        ModelConfig(model_id="PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1",
+        ModelConfig(model_id="alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union-2.1",
                     origin_file_pattern="Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors", **vram_cfg),
     ],
     tokenizer_config=ModelConfig(model_id="Tongyi-MAI/Z-Image", origin_file_pattern="tokenizer/"),

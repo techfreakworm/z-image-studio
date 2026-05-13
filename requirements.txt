@@ -1,6 +1,7 @@
 # Core
 gradio==5.50.0
-spaces==0.30.0
+# `spaces` is auto-injected by HF Spaces on ZeroGPU at build time (pin would conflict).
+# Locally, install it ad-hoc if you want to test the @spaces.GPU decorator path.
 diffsynth @ git+https://github.com/modelscope/DiffSynth-Studio.git
 torch>=2.4
 safetensors>=0.4.5

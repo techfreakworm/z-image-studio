@@ -21,6 +21,9 @@ venv/
 !assets/seed_inputs/*.png
 !assets/seed_inputs/*.jpg
 
+# DiffSynth-local model dir (symlinks to HF cache; weights live in ~/.cache/huggingface/hub)
+models/
+
 # Gradio runtime
 gradio_cached_examples/
 output/
