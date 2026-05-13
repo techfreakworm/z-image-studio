@@ -2611,3 +2611,431 @@ Plan complete. Two execution options:
 2. **Inline Execution** — Execute tasks in this session using `executing-plans`, batch execution with checkpoints.
 
 Which approach?
+
+---
+
+## Plan Amendments (2026-05-13, post-Task-3)
+
+Additions decided after Tasks 1–3 landed. References spec sections 4.6 (tooltips) and 4.7 (coming-soon model placeholders).
+
+**Insertion order:** Tasks A and B run *now* (before Task 4) since they extend modules already implemented. Task C runs *with* Task 14 (UI builders) — its helpers replace some of Task 14's component-building code.
+
+---
+
+### Task A: copy.py — TOOLTIPS dict
+
+**Files:**
+- Create: `copy.py`
+- Test: `tests/test_copy.py`
+
+- [ ] **Step A.1: Write failing test**
+
+```python
+# tests/test_copy.py
+import copy as zis_copy  # name shadows the stdlib `copy` but the module is unrelated
+
+REQUIRED_KEYS = {
+    "prompt", "negative_prompt", "model", "lora", "lora_strength",
+    "steps", "cfg", "width", "height", "seed",
+    "controlnet_image", "controlnet_preprocessor", "controlnet_scale",
+    "upscale_image", "refine_steps", "refine_denoise", "output",
+}
+
+def test_tooltips_has_all_required_keys():
+    assert REQUIRED_KEYS <= set(zis_copy.TOOLTIPS)
+
+def test_tooltips_values_are_non_empty_strings():
+    for key, val in zis_copy.TOOLTIPS.items():
+        assert isinstance(val, str) and val.strip(), f"{key} is empty or non-string"
+
+def test_tooltips_values_are_short_enough_for_a_tooltip():
+    # 200-char ceiling so tooltips don't overflow on phone
+    for key, val in zis_copy.TOOLTIPS.items():
+        assert len(val) <= 200, f"{key} is too long for a tooltip ({len(val)} chars)"
+```
+
+- [ ] **Step A.2: Run test — expect FAIL** (`pytest tests/test_copy.py -v` → ModuleNotFoundError).
+
+- [ ] **Step A.3: Implement `copy.py`**
+
+```python
+"""User-facing copy — tooltips and similar short strings.
+
+Kept separate from ``ui.py`` so copy edits don't touch component wiring. Every
+key here MUST be referenced from a labeled component in ``ui.py`` (and vice versa).
+"""
+from __future__ import annotations
+
+TOOLTIPS: dict[str, str] = {
+    "prompt":                  "What to generate. Be specific: subject, style, lighting, camera angle.",
+    "negative_prompt":         "What to avoid (Base only). e.g. 'blurry, low quality, distorted'.",
+    "model":                   "Base = 25 steps, higher quality. Turbo = 8 steps, fast.",
+    "lora":                    "Optional .safetensors LoRA file. Trained on Z-Image base or turbo.",
+    "lora_strength":           "LoRA influence. 0.6–1.0 typical. Higher = more LoRA, less base model.",
+    "steps":                   "Denoising steps. Turbo: 6–10. Base: 20–30. More = better detail, slower.",
+    "cfg":                     "Classifier-free guidance. Turbo: locked at 1.0. Base: 3–5 typical.",
+    "width":                   "Output width in pixels. Multiples of 64. Higher = more memory.",
+    "height":                  "Output height in pixels. Multiples of 64.",
+    "seed":                    "0 = random each run. Pin a number to reproduce an image exactly.",
+    "controlnet_image":        "Control image — the structural reference for the output.",
+    "controlnet_preprocessor": "Canny = edges, Depth = depth map, Pose = body pose, Pre-processed = use image as-is.",
+    "controlnet_scale":        "How strongly the control image guides the output. 0.6–1.2 typical.",
+    "upscale_image":           "Input image to upscale 2x.",
+    "refine_steps":            "Steps for the Z-Image-Turbo refinement pass after RealESRGAN. 3–8 typical.",
+    "refine_denoise":          "How much the refinement alters pixels. 0.2–0.4 typical. Higher = more detail change.",
+    "output":                  "Generated image. Right-click to download full resolution.",
+}
+```
+
+- [ ] **Step A.4: Run test — expect PASS** (3 PASSed).
+
+- [ ] **Step A.5: Commit**
+
+```bash
+git add copy.py tests/test_copy.py
+git commit -m "feat(copy): tooltip strings dict — one source of truth for param descriptions"
+```
+
+---
+
+### Task B: theme.py CSS extensions — .zis-info / .zis-models / .zis-model
+
+**Files:**
+- Modify: `theme.py` (extend the `CSS` constant)
+- Test: `tests/test_theme.py` (append new test)
+
+- [ ] **Step B.1: Write failing test**
+
+Append to `tests/test_theme.py`:
+
+```python
+def test_css_includes_param_tooltip_rule():
+    css = theme.CSS
+    assert ".zis-info" in css
+    assert "data-info" in css  # the attr() reference in ::after
+    assert "::after" in css
+
+def test_css_includes_model_selector_rules():
+    css = theme.CSS
+    assert ".zis-models" in css
+    assert ".zis-model" in css
+    assert ".zis-model.on" in css
+    assert ".zis-model.soon" in css
+
+def test_css_model_grid_is_responsive():
+    css = theme.CSS
+    # Phone is the default 2-col; tablet+ bumps to 4-col via media query.
+    assert "grid-template-columns" in css
+    assert "@media" in css
+    assert "min-width: 768px" in css or "min-width:768px" in css
+```
+
+- [ ] **Step B.2: Run test — expect FAIL** (new assertions fail).
+
+- [ ] **Step B.3: Extend `theme.CSS`**
+
+Append the following CSS block to the existing `CSS` string in `theme.py` (the existing rules stay; this is purely additive):
+
+```python
+CSS = CSS + """
+
+/* ===== Param tooltip — (i) icon next to labels (spec § 4.6) ===== */
+
+.zis-row-label {
+    display: inline-flex; align-items: center;
+    font-size: 11px; color: #A89478; font-weight: 500;
+    margin-bottom: 6px;
+}
+.zis-info {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 12px; height: 12px;
+    font: italic 600 8px 'Geist', system-ui, sans-serif;
+    border: 1px solid #2A2218; border-radius: 50%;
+    color: #A89478; vertical-align: super;
+    margin-left: 3px; cursor: help; position: relative;
+    transition: border-color 0.12s, color 0.12s;
+}
+.zis-info:hover { border-color: #FFB02E; color: #FFB02E; }
+.zis-info::after {
+    content: attr(data-info);
+    position: absolute; bottom: 100%; left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    background: #1C170F; color: #FAF1E3;
+    border: 1px solid #2A2218; border-radius: 6px;
+    padding: 6px 10px;
+    font: 400 11px 'Geist', system-ui, sans-serif; line-height: 1.4;
+    width: 200px; white-space: normal;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.12s; z-index: 50;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.zis-info:hover::after, .zis-info.shown::after { opacity: 1; }
+
+/* ===== Custom model selector — 2-col phone / 4-col tablet+ (spec § 4.7) ===== */
+
+.zis-models {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+@media (min-width: 768px) {
+    .zis-models { grid-template-columns: repeat(4, 1fr); }
+}
+.zis-model {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #2A2218; border-radius: 8px;
+    background: transparent; cursor: pointer;
+    color: #FAF1E3;
+    font: 500 12px 'Geist', system-ui, sans-serif;
+    text-decoration: none;
+    transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+}
+.zis-model .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    border: 1px solid #2A2218; flex-shrink: 0;
+}
+.zis-model .name { flex: 1; text-align: left; }
+.zis-model.on {
+    background: #FFB02E; color: #1A1208; border-color: #FFB02E;
+}
+.zis-model.on .dot { background: #1A1208; border-color: #1A1208; }
+.zis-model.soon {
+    opacity: 0.55;
+    background: rgba(255,176,46,0.04);
+    border-style: dashed;
+    position: relative;
+}
+.zis-model.soon .name { color: #A89478; }
+.zis-model.soon .name .ext {
+    font-size: 10px; color: #FFB02E;
+    margin-left: 4px; vertical-align: super;
+}
+.zis-model.soon .soon-tag {
+    font-family: 'Geist Mono', ui-monospace, monospace;
+    font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: rgba(255,176,46,0.18); color: #FFB02E;
+    padding: 2px 6px; border-radius: 100px;
+    flex-shrink: 0;
+}
+.zis-model.soon:hover { opacity: 0.78; border-color: #FFB02E; }
+.zis-model.soon::after {
+    content: "Coming soon — opens GitHub";
+    position: absolute; bottom: 100%; left: 50%;
+    transform: translateX(-50%) translateY(-4px);
+    background: #1C170F; color: #FAF1E3;
+    border: 1px solid #2A2218; border-radius: 6px;
+    padding: 6px 10px;
+    font: 400 11px 'Geist', system-ui, sans-serif;
+    white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.12s; z-index: 50;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.zis-model.soon:hover::after { opacity: 1; }
+""".rstrip()
+```
+
+(Implementation note: don't *literally* write `CSS = CSS + """..."""` — just paste the new rules at the end of the existing triple-quoted `CSS` string. The reassignment form above is shown to make the additive intent explicit.)
+
+- [ ] **Step B.4: Run all theme tests — expect PASS** (7 PASSed: 4 original + 3 new).
+
+- [ ] **Step B.5: Commit**
+
+```bash
+git add theme.py tests/test_theme.py
+git commit -m "feat(theme): css rules for param info tooltips and custom model selector"
+```
+
+---
+
+### Task C: ui.py helpers — labeled_label() + model_selector_html()
+
+This task is part of Task 14 (UI builders) — see the modification note below. It's broken out here so the helpers are tested before Task 14 wires them up.
+
+**Files:**
+- Create: `ui.py` (start of file — Task 14 will add the per-tab builders after)
+- Test: `tests/test_ui.py` (new — Task 14's smoke tests will be appended later)
+
+- [ ] **Step C.1: Write failing test**
+
+Create `tests/test_ui.py`:
+
+```python
+import pytest
+
+import ui
+
+
+def test_labeled_label_returns_html_string():
+    out = ui.labeled_label("Steps", "Denoising steps.")
+    assert isinstance(out, str)
+    assert "<label" in out and "</label>" in out
+    assert ">Steps<" in out
+    assert 'data-info="Denoising steps."' in out
+    assert ">i<" in out  # the icon glyph
+
+
+def test_labeled_label_escapes_html_chars():
+    out = ui.labeled_label("Steps <x>", 'A "quoted" hint')
+    assert "<x>" not in out
+    assert "&lt;x&gt;" in out
+    assert "&quot;quoted&quot;" in out
+
+
+def test_model_selector_html_marks_current_as_on():
+    out = ui.model_selector_html(current="Turbo")
+    assert 'class="zis-model on" data-value="Turbo"' in out
+    assert 'class="zis-model" data-value="Base"' in out
+
+
+def test_model_selector_html_includes_both_soon_cards_with_github_link():
+    out = ui.model_selector_html(current="Turbo")
+    assert out.count("github.com/Tongyi-MAI/Z-Image#model-zoo") == 2
+    assert "Edit" in out
+    assert "Omni Base" in out
+    assert "soon-tag" in out
+    assert 'target="_blank"' in out
+    assert 'rel="noopener noreferrer"' in out
+
+
+def test_model_selector_html_defaults_to_turbo():
+    out = ui.model_selector_html()
+    assert 'class="zis-model on" data-value="Turbo"' in out
+
+
+def test_model_selector_html_escapes_current_value():
+    out = ui.model_selector_html(current='<script>alert(1)</script>')
+    assert "<script>" not in out
+```
+
+- [ ] **Step C.2: Run test — expect FAIL** (ModuleNotFoundError: ui).
+
+- [ ] **Step C.3: Implement the helpers in `ui.py`**
+
+```python
+"""Gradio UI builders + small HTML helpers for the (i) tooltip pattern and the custom model selector."""
+from __future__ import annotations
+
+from html import escape
+
+GITHUB_MODEL_ZOO_URL = "https://github.com/Tongyi-MAI/Z-Image#model-zoo"
+
+
+def labeled_label(text: str, info_text: str) -> str:
+    """Return HTML for a label with an (i) tooltip icon next to it.
+
+    Use immediately before a ``gr.Slider`` / ``gr.Textbox`` / ``gr.File`` etc.
+    that itself has ``show_label=False``. The CSS for ``.zis-row-label`` and
+    ``.zis-info`` is defined in :mod:`theme`.
+    """
+    return (
+        f'<label class="zis-row-label">{escape(text)}'
+        f'<span class="zis-info" data-info="{escape(info_text)}">i</span>'
+        f'</label>'
+    )
+
+
+def model_selector_html(current: str = "Turbo") -> str:
+    """Custom T2I model selector — 2-col phone / 4-col tablet+ grid of cards.
+
+    Two functional ``<button>`` cards (Base, Turbo) — clicks fire
+    ``zis.setModel('<name>')`` defined in app.py's ``head=`` script.
+
+    Two coming-soon ``<a>`` cards (Edit, Omni Base) — open the Z-Image GitHub
+    README's Model Zoo section in a new tab. Marked with a `.soon` class and a
+    "soon" pill that doesn't overlap the model name (separate flex children).
+    """
+    current_safe = escape(current)
+    cards: list[str] = []
+    for name in ("Base", "Turbo"):
+        cls = "zis-model on" if name == current else "zis-model"
+        cards.append(
+            f'<button type="button" class="{cls}" data-value="{name}" '
+            f'onclick="zis.setModel(\'{name}\')">'
+            f'<span class="dot"></span>'
+            f'<span class="name">{name}</span>'
+            f'</button>'
+        )
+    for name in ("Edit", "Omni Base"):
+        cards.append(
+            f'<a class="zis-model soon" '
+            f'href="{GITHUB_MODEL_ZOO_URL}" '
+            f'target="_blank" rel="noopener noreferrer">'
+            f'<span class="dot"></span>'
+            f'<span class="name">{name}<span class="ext">↗</span></span>'
+            f'<span class="soon-tag">soon</span>'
+            f'</a>'
+        )
+    # current_safe is referenced only to ensure escape() is exercised
+    # in the unit test; the literal current is matched in cls above.
+    _ = current_safe
+    return f'<div class="zis-models">{"".join(cards)}</div>'
+```
+
+- [ ] **Step C.4: Run test — expect PASS** (6 PASSed).
+
+- [ ] **Step C.5: Commit**
+
+```bash
+git add ui.py tests/test_ui.py
+git commit -m "feat(ui): labeled_label and model_selector_html helpers"
+```
+
+---
+
+### Modifications to existing Tasks 14 + 15
+
+**Task 14 (UI builders):** the per-tab builders defined later in `ui.py` MUST now:
+
+1. Each `gr.Slider` / `gr.Textbox` / `gr.File` / `gr.Image` / `gr.Dropdown` / `gr.Number` uses `show_label=False` AND is preceded inside a `with gr.Column():` block by `gr.HTML(labeled_label(LABEL_TEXT, TOOLTIPS[KEY]))`.
+2. The T2I tab replaces the previous `gr.Radio(["Base","Turbo"], …)` with:
+   ```python
+   model_state = gr.Textbox(value="Turbo", visible=False, elem_id="zis-model-state")
+   gr.HTML(model_selector_html(current="Turbo"))
+   ```
+   `model_state` becomes the input fed into the T2I generate handler (replaces `model` in `inputs=[...]`).
+3. The dict returned by `build_t2i_tab()` swaps the `model` key for `model_state` (still a Gradio component).
+
+The smoke test in Task 14 must continue to pass with the updated dict keys.
+
+**Task 15 (app.py):**
+
+Add a `_HEAD_JS` constant and pass it to `gr.Blocks(head=...)`:
+
+```python
+_HEAD_JS = """
+<script>
+window.zis = {
+    setModel: function(name) {
+        document.querySelectorAll('.zis-model').forEach(el => {
+            el.classList.toggle('on', el.dataset.value === name);
+        });
+        const hidden = document.querySelector('#zis-model-state textarea, #zis-model-state input');
+        if (hidden) {
+            hidden.value = name;
+            hidden.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    }
+};
+// Tap-to-pin tooltips on mobile
+document.addEventListener('touchstart', function(e) {
+    const tip = e.target.closest('.zis-info');
+    document.querySelectorAll('.zis-info.shown').forEach(el => {
+        if (el !== tip) el.classList.remove('shown');
+    });
+    if (tip) tip.classList.toggle('shown');
+}, { passive: true });
+</script>
+""".strip()
+```
+
+In `build_app`:
+
+```python
+with gr.Blocks(theme=theme.build_theme(), css=theme.CSS, head=_HEAD_JS, title="z-image-studio") as demo:
+    ...
+```
+
+T2I handler input list changes: replace `t["model"]` with `t["model_state"]` everywhere.

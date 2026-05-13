@@ -113,15 +113,160 @@ Aesthetic locked from the brainstorm: warm dark, golden amber accent, Geist fami
 ### 4.4 Component patterns (all Gradio-native shapes)
 
 - **Tab strip** — top horizontal `gr.Tabs` with underline indicator in amber on the active tab.
-- **Prompt** — `gr.Textbox(lines=4, label="Prompt")` — full width.
-- **Model selector** — `gr.Radio(["Base", "Turbo"], value="Turbo", label="Model")` — T2I tab only.
-- **LoRA loader** — `gr.File(label="LoRA", file_types=[".safetensors"])` + `gr.Slider(0.0, 1.5, value=0.8, label="LoRA strength", step=0.05)`. On phone they stack; on tablet+ they share a row.
-- **Parameter sliders** — Steps, CFG (T2I-base only), Width, Height, Seed.
-- **ControlNet-only** — additional `gr.Image(label="Control image")` + `gr.Dropdown(["Canny","Depth","Pose","Pre-processed"], value="Canny")` + `gr.Slider(0.0, 2.0, value=1.0, label="ControlNet scale")`.
-- **Upscale-only** — additional `gr.Image(label="Input image")`; no model selector; the upscale prompt defaults to `"masterpiece, 8k"` and is editable.
+- **Prompt** — `gr.Textbox(lines=4, show_label=False)` preceded by a `gr.HTML` rendering the labeled label (see § 4.6).
+- **Model selector (T2I tab only)** — custom `gr.HTML` block rendering a 2-col (phone) / 4-col (tablet+) grid of "model cards" backed by a hidden `gr.State("Turbo")`. Two functional cards (Base, Turbo) and two coming-soon cards (Edit, Omni Base) — see § 4.7 for full pattern.
+- **LoRA loader** — `gr.File(file_types=[".safetensors"], show_label=False)` + `gr.Slider(0.0, 1.5, value=0.8, step=0.05, show_label=False)`. On phone they stack; on tablet+ they share a row. Both rows preceded by labeled-label HTML.
+- **Parameter sliders** — Steps, CFG (T2I-base only), Width, Height, Seed. Each is a `gr.Slider` with `show_label=False` and a preceding labeled-label HTML. **Gradio's `gr.Slider` already pairs the track with an editable numeric input that accepts typed values** (matches LTX repo pattern — no extra widget needed).
+- **ControlNet-only** — additional `gr.Image(show_label=False)` for the control image + `gr.Dropdown(["Canny","Depth","Pose","Pre-processed"], value="Canny", show_label=False)` + `gr.Slider(0.0, 2.0, value=1.0, step=0.05, show_label=False)` for ControlNet scale. All preceded by labeled-label HTML.
+- **Upscale-only** — additional `gr.Image(show_label=False)` for the input image; no model selector (locked to Turbo); the upscale prompt defaults to `"masterpiece, 8k"` and is editable.
 - **Generate button** — `gr.Button("Generate", variant="primary")` — amber fill with glow.
-- **Output** — `gr.Image(label="Output", show_download_button=True)` + `gr.JSON(label="Meta", value={...seed, steps, model, lora})`.
+- **Output** — `gr.Image(show_label=False, show_download_button=True)` + `gr.JSON(value={...seed, steps, model, lora})`.
 - **Status line** — `gr.Markdown` updated on generation start/end. Mono font, dim text.
+
+### 4.6 Param info tooltips
+
+Every user-facing param gets an info-icon affordance: a subtle circled `i` superscript next to the label, hover (desktop) or tap (mobile) reveals a short description tooltip.
+
+**Pattern.** A helper `labeled_label(text, info_text) -> str` in `ui.py` returns the HTML string:
+
+```html
+<label class="zis-row-label">
+  {text}<span class="zis-info" data-info="{info_text}">i</span>
+</label>
+```
+
+`gr.HTML(labeled_label("Steps", TOOLTIPS["steps"]))` is placed immediately before the corresponding `gr.Slider` (which uses `show_label=False`). One `gr.HTML` per labeled component.
+
+**Tooltip text source.** All strings live in a new `copy.py` module as a flat dict `TOOLTIPS[component_id]`. Keeping them out of `ui.py` lets copy edits stay separate from component wiring. Initial keys: `prompt`, `negative_prompt`, `model`, `lora`, `lora_strength`, `steps`, `cfg`, `width`, `height`, `seed`, `controlnet_image`, `controlnet_preprocessor`, `controlnet_scale`, `upscale_image`, `refine_steps`, `refine_denoise`, `output`.
+
+**Styling.** Pure CSS in `theme.CSS`:
+
+```css
+.zis-info {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 12px; height: 12px;
+  font: italic 600 8px 'Geist';
+  border: 1px solid #2A2218; border-radius: 50%;
+  color: #A89478; vertical-align: super;
+  margin-left: 3px; cursor: help; position: relative;
+  transition: all 0.12s;
+}
+.zis-info:hover { border-color: #FFB02E; color: #FFB02E; }
+.zis-info::after {
+  content: attr(data-info);
+  position: absolute; bottom: 100%; left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: #1C170F; color: #FAF1E3;
+  border: 1px solid #2A2218; border-radius: 6px;
+  padding: 6px 10px; font: 400 11px 'Geist'; line-height: 1.4;
+  width: 200px; opacity: 0; pointer-events: none;
+  transition: opacity 0.12s; z-index: 50;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.zis-info:hover::after, .zis-info.shown::after { opacity: 1; }
+```
+
+**Mobile tap-to-pin.** A small script in `gr.Blocks(head=...)`:
+
+```javascript
+document.addEventListener("touchstart", (e) => {
+  const tip = e.target.closest(".zis-info");
+  document.querySelectorAll(".zis-info.shown").forEach(el => {
+    if (el !== tip) el.classList.remove("shown");
+  });
+  if (tip) tip.classList.toggle("shown");
+}, { passive: true });
+```
+
+Desktop hover behavior is pure CSS — no JS needed.
+
+### 4.7 Coming-soon model placeholders (Edit + Omni Base)
+
+The T2I tab's Model selector replaces `gr.Radio` with a custom HTML grid because two of the four options aren't selectable — they redirect to the official Z-Image GitHub README.
+
+**Pattern.** Inside a `gr.HTML` block:
+
+```html
+<div class="zis-models">
+  <button class="zis-model" data-value="Base"  onclick="zis.setModel('Base')">
+    <span class="dot"></span><span class="name">Base</span>
+  </button>
+  <button class="zis-model on" data-value="Turbo" onclick="zis.setModel('Turbo')">
+    <span class="dot"></span><span class="name">Turbo</span>
+  </button>
+  <a class="zis-model soon"
+     href="https://github.com/Tongyi-MAI/Z-Image#model-zoo"
+     target="_blank" rel="noopener noreferrer">
+    <span class="dot"></span>
+    <span class="name">Edit<span class="ext">↗</span></span>
+    <span class="soon-tag">soon</span>
+  </a>
+  <a class="zis-model soon"
+     href="https://github.com/Tongyi-MAI/Z-Image#model-zoo"
+     target="_blank" rel="noopener noreferrer">
+    <span class="dot"></span>
+    <span class="name">Omni Base<span class="ext">↗</span></span>
+    <span class="soon-tag">soon</span>
+  </a>
+</div>
+```
+
+A hidden `gr.Textbox(visible=False, value="Turbo")` holds the selected model name. The JS helper `zis.setModel(name)` updates the textbox via Gradio's `setComponentValue` and toggles the `.on` class on the clicked card. Mode handlers read the textbox value.
+
+**Disabled-card hover** shows a tooltip via `::after` ("Coming soon — opens GitHub"). The `<a target="_blank" rel="noopener">` opens the README's `#model-zoo` anchor where Edit + Omni Base are listed as "To be released".
+
+**Styling.** Added to `theme.CSS`:
+
+```css
+.zis-models { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+@media (min-width: 768px) {
+  .zis-models { grid-template-columns: repeat(4, 1fr); }
+}
+.zis-model {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border: 1px solid #2A2218; border-radius: 8px;
+  background: transparent; cursor: pointer; color: #FAF1E3;
+  font: 500 12px 'Geist'; text-decoration: none;
+  transition: all 0.15s;
+}
+.zis-model .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 1px solid #2A2218; flex-shrink: 0;
+}
+.zis-model .name { flex: 1; text-align: left; }
+.zis-model.on { background: #FFB02E; color: #1A1208; border-color: #FFB02E; }
+.zis-model.on .dot { background: #1A1208; border-color: #1A1208; }
+.zis-model.soon {
+  opacity: 0.55; background: rgba(255,176,46,0.04);
+  border-style: dashed; padding-right: 8px;
+  position: relative;
+}
+.zis-model.soon .name { color: #A89478; }
+.zis-model.soon .name .ext {
+  font-size: 10px; color: #FFB02E; margin-left: 4px; vertical-align: super;
+}
+.zis-model.soon .soon-tag {
+  font-family: 'Geist Mono', monospace; font-size: 8.5px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  background: rgba(255,176,46,0.18); color: #FFB02E;
+  padding: 2px 6px; border-radius: 100px;
+  flex-shrink: 0;
+}
+.zis-model.soon:hover { opacity: 0.78; border-color: #FFB02E; }
+.zis-model.soon::after {
+  content: "Coming soon — opens GitHub";
+  position: absolute; bottom: 100%; left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: #1C170F; color: #FAF1E3;
+  border: 1px solid #2A2218; border-radius: 6px;
+  padding: 6px 10px; font: 400 11px 'Geist'; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity 0.12s; z-index: 50;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.zis-model.soon:hover::after { opacity: 1; }
+```
+
+ControlNet + Upscale tabs do NOT show this selector — they're hard-locked to Turbo.
 
 ### 4.5 Responsive behavior
 
@@ -146,8 +291,9 @@ llm/z-image-studio/
 ├── preprocessors.py    # Canny / Depth / Pose via controlnet_aux (lazy)
 ├── upscale.py          # RealESRGAN x4 wrapper + 0.5-resize bridge
 ├── lora.py             # LoRA safetensors header sniffer + apply/revert ctx
-├── ui.py               # Per-tab Gradio component builders
-├── theme.py            # Amber tokens + gr.themes.Base subclass + CSS string
+├── ui.py               # Per-tab Gradio component builders + labeled_label() + model selector HTML helpers
+├── theme.py            # Amber tokens + gr.themes.Base subclass + CSS string (includes .zis-info / .zis-models / .zis-model rules)
+├── copy.py             # TOOLTIPS dict — short info strings per component id (one source of truth)
 ├── pyproject.toml      # ruff config; py311
 ├── requirements.txt    # diffsynth-studio, gradio==5.x, spaces, controlnet-aux, realesrgan, ...
 ├── README.md           # HF Space YAML frontmatter (preload_from_hub) + user docs
@@ -336,6 +482,12 @@ No mocks for `ZImagePipeline` internals — only for its `__call__` boundary. Te
 3. **No persistent storage add-on** needed — Pro Space + ephemeral storage is enough.
 4. **License MIT** — say otherwise during review if you'd prefer Apache-2.0.
 5. **ControlNet preload is in the YAML** — accept the larger startup at the gain of zero first-ControlNet-call wait. If RAM is tight at boot we'll move it to lazy.
+6. **Custom model selector replaces `gr.Radio` in T2I** (per § 4.7) — necessary because two of the four cards are external-link `<a>` elements, not selectable options. A hidden `gr.Textbox` carries the state.
+7. **Tooltips wrap every param via a `labeled_label()` HTML helper** (per § 4.6) — every `gr.Slider`/`gr.Textbox`/`gr.Image`/`gr.Dropdown`/`gr.Number`/`gr.File` uses `show_label=False` with a preceding `gr.HTML(labeled_label(...))`. Tooltip strings centralized in `copy.py`.
+8. **Slider typing comes free** — `gr.Slider` already renders an editable numeric input next to the track (Gradio default; matches LTX repo). No custom widget needed.
+
+**Out of scope additions (v1):**
+- Keyboard navigation between custom model cards (Tab moves through them as native `<a>`/`<button>`, but arrow-key cycling like a true radio group is deferred to v1.1).
 
 ---
 
