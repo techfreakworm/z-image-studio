@@ -2136,7 +2136,7 @@ def _coerce_lora(lora_path: str | None) -> Path | None:
 def _esrgan_path() -> str:
     """Locate the preloaded RealESRGAN_x4plus.pth."""
     from huggingface_hub import hf_hub_download
-    return hf_hub_download("xinntao/Real-ESRGAN", "RealESRGAN_x4plus.pth")
+    return hf_hub_download("lllyasviel/Annotators", "RealESRGAN_x4plus.pth")
 
 
 def on_t2i_generate(prompt, negative_prompt, model, steps, cfg,
@@ -2298,7 +2298,7 @@ preload_from_hub:
   - Tongyi-MAI/Z-Image transformer/diffusion_pytorch_model.safetensors,text_encoder/*.safetensors,vae/diffusion_pytorch_model.safetensors,tokenizer/*
   - Tongyi-MAI/Z-Image-Turbo transformer/diffusion_pytorch_model.safetensors
   - PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1 Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors
-  - xinntao/Real-ESRGAN RealESRGAN_x4plus.pth
+  - lllyasviel/Annotators RealESRGAN_x4plus.pth
 ---
 
 # z-image-studio
@@ -2512,7 +2512,7 @@ def test_upscale_produces_image(real_backend, tmp_path):
                     input_image=Image.fromarray(arr),
                     refine_steps=5, refine_denoise=0.33, seed=42,
                     lora_path=None, lora_strength=0.0,
-                    esrgan_model_path=hf_hub_download("xinntao/Real-ESRGAN",
+                    esrgan_model_path=hf_hub_download("lllyasviel/Annotators",
                                                      "RealESRGAN_x4plus.pth")),
     )
     assert image.size == (512, 512)

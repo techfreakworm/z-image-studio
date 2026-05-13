@@ -73,7 +73,7 @@ def _esrgan_path() -> str:
     """Locate the preloaded RealESRGAN_x4plus.pth."""
     from huggingface_hub import hf_hub_download
 
-    return hf_hub_download("xinntao/Real-ESRGAN", "RealESRGAN_x4plus.pth")
+    return hf_hub_download("lllyasviel/Annotators", "RealESRGAN_x4plus.pth")
 
 
 def on_t2i_generate(prompt, negative_prompt, model, steps, cfg, width, height, seed, lora_path, lora_strength):

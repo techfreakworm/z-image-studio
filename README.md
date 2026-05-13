@@ -13,7 +13,7 @@ preload_from_hub:
   - Tongyi-MAI/Z-Image transformer/diffusion_pytorch_model.safetensors,text_encoder/*.safetensors,vae/diffusion_pytorch_model.safetensors,tokenizer/*
   - Tongyi-MAI/Z-Image-Turbo transformer/diffusion_pytorch_model.safetensors
   - PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1 Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors
-  - xinntao/Real-ESRGAN RealESRGAN_x4plus.pth
+  - lllyasviel/Annotators RealESRGAN_x4plus.pth
 ---
 
 # z-image-studio

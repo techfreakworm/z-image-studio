@@ -92,7 +92,7 @@ def test_upscale_produces_image(real_backend, tmp_path):
             seed=42,
             lora_path=None,
             lora_strength=0.0,
-            esrgan_model_path=hf_hub_download("xinntao/Real-ESRGAN", "RealESRGAN_x4plus.pth"),
+            esrgan_model_path=hf_hub_download("lllyasviel/Annotators", "RealESRGAN_x4plus.pth"),
         ),
     )
     assert image.size == (512, 512)
