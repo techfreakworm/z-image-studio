@@ -69,7 +69,7 @@ def build_t2i_tab() -> dict[str, gr.components.Component]:
             gr.HTML(labeled_label("Negative prompt (Base only)", TOOLTIPS["negative_prompt"]))
             negative_prompt = gr.Textbox(lines=2, show_label=False, placeholder="blurry, lowres, distorted")
             gr.HTML(labeled_label("Model", TOOLTIPS["model"]))
-            model_state = gr.Textbox(value="Turbo", visible=False, elem_id="zis-model-state")
+            model_state = gr.Textbox(value="Turbo", elem_id="zis-model-state", elem_classes=["zis-hidden"])
             gr.HTML(model_selector_html(current="Turbo"))
             with gr.Row():
                 with gr.Column():

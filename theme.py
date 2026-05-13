@@ -150,6 +150,9 @@ body, .gradio-container {
 }
 .zis-info:hover::after, .zis-info.shown::after { opacity: 1; }
 
+/* Hidden state carrier — in DOM for JS targeting, invisible to users */
+.zis-hidden { display: none !important; }
+
 /* ===== Custom model selector — 2-col phone / 4-col tablet+ (spec § 4.7) ===== */
 
 .zis-models {
