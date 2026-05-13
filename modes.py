@@ -87,7 +87,15 @@ def call_controlnet(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dic
         raise ValueError("ControlNet mode requires an input image")
 
     preproc_mode = params.get("preprocessor", "Canny")
-    control_image = preprocessors.run(preproc_mode, input_image)
+    try:
+        control_image = preprocessors.run(preproc_mode, input_image)
+    except Exception as e:
+        import sys
+
+        print(
+            f"[modes] preprocessor {preproc_mode!r} failed: {e}; falling back to raw input", file=sys.stderr, flush=True
+        )
+        control_image = input_image
 
     _swap_transformer(pipe, "Turbo")
 

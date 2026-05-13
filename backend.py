@@ -37,12 +37,14 @@ def duration_for(
     width = int(params.get("width", 1024))
     height = int(params.get("height", 1024))
 
+    eff_multiplier = float(params.get("__retry_multiplier__", multiplier))
+
     base = _BASE_DURATION_S.get(mode, 30)
     per_step = _PER_STEP_S.get((mode, model), _PER_STEP_S.get((mode, "Turbo"), 1.6))
     size_factor = (width * height) / (1024 * 1024)
     cold_buffer = 15  # CPU→GPU copy on first call after a quiet period
 
-    est = (base + per_step * steps + cold_buffer) * size_factor * multiplier
+    est = (base + per_step * steps + cold_buffer) * size_factor * eff_multiplier
     return max(60, min(int(est), 180))
 
 
@@ -111,3 +113,20 @@ class ZImageStudioBackend:
         if handler is None:
             raise ValueError(f"unknown mode: {mode!r}; expected one of {list(_DISPATCH)}")
         return handler(self.pipeline, params)
+
+
+def generate_with_retry(
+    backend_instance: ZImageStudioBackend,
+    mode: str,
+    params: dict[str, Any],
+) -> tuple[Any, dict[str, Any]]:
+    """Call backend_instance.generate; on ZeroGPU timeout, retry once with 2x duration budget."""
+    try:
+        return backend_instance.generate(mode, params)
+    except Exception as e:
+        msg = str(e).lower()
+        if "gpu task aborted" in msg or ("gpu" in msg and "aborted" in msg):
+            retry_params = dict(params)
+            retry_params["__retry_multiplier__"] = 2.0
+            return backend_instance.generate(mode, retry_params)
+        raise

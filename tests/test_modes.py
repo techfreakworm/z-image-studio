@@ -190,3 +190,29 @@ def test_upscale_rejects_missing_image(fake_pipe):
                 esrgan_model_path="/fake.pth",
             ),
         )
+
+
+def test_controlnet_falls_back_when_preprocessor_raises(fake_pipe, monkeypatch):
+    def boom(mode, img):
+        raise RuntimeError("preprocessor exploded")
+
+    monkeypatch.setattr(modes, "preprocessors", type("P", (), {"run": staticmethod(boom)}))
+
+    input_image = Image.new("RGB", (512, 512))
+    _out, _meta = modes.call_controlnet(
+        fake_pipe,
+        params=dict(
+            prompt="x",
+            input_image=input_image,
+            preprocessor="Canny",
+            controlnet_scale=1.0,
+            steps=9,
+            seed=0,
+            lora_path=None,
+            lora_strength=0.0,
+        ),
+    )
+    # Pipeline still ran — fallback to raw input
+    kwargs = fake_pipe.call_args.kwargs
+    cn_in = kwargs["controlnet_inputs"]
+    assert cn_in[0].image is input_image  # the raw input, not a preprocessed image

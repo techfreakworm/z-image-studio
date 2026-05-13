@@ -35,7 +35,7 @@ def _bootstrap() -> None:
 _bootstrap()
 
 
-# ----- Eager backend boot ----------------------------------------------------
+# ----- Lazy backend singleton ------------------------------------------------
 
 _BACKEND: backend.ZImageStudioBackend | None = None
 
@@ -60,6 +60,13 @@ def _coerce_lora(lora_path: str | None) -> Path | None:
     p = Path(lora_path)
     lora_mod.sniff(p)  # validate cheaply; raises LoRAValidationError if bad
     return p
+
+
+def _on_model_change(model_name: str) -> tuple[int, float]:
+    """When the user clicks Base / Turbo in the custom selector, update steps + cfg."""
+    if model_name == "Base":
+        return 25, 4.0
+    return 8, 1.0  # Turbo
 
 
 def _esrgan_path() -> str:
@@ -87,7 +94,7 @@ def on_t2i_generate(prompt, negative_prompt, model, steps, cfg, width, height, s
         lora_path=lora_p,
         lora_strength=float(lora_strength),
     )
-    image, meta = get_backend().generate(mode="t2i", params=params)
+    image, meta = backend.generate_with_retry(get_backend(), mode="t2i", params=params)
     return image, meta
 
 
@@ -107,7 +114,7 @@ def on_controlnet_generate(prompt, input_image, preprocessor, controlnet_scale, 
         lora_path=lora_p,
         lora_strength=float(lora_strength),
     )
-    image, meta = get_backend().generate(mode="controlnet", params=params)
+    image, meta = backend.generate_with_retry(get_backend(), mode="controlnet", params=params)
     return image, meta
 
 
@@ -127,7 +134,7 @@ def on_upscale_generate(prompt, input_image, refine_steps, refine_denoise, seed,
         lora_strength=float(lora_strength),
         esrgan_model_path=_esrgan_path(),
     )
-    image, meta = get_backend().generate(mode="upscale", params=params)
+    image, meta = backend.generate_with_retry(get_backend(), mode="upscale", params=params)
     return image, meta
 
 
@@ -191,6 +198,11 @@ def build_app() -> gr.Blocks:
                         t["lora_strength"],
                     ],
                     outputs=[t["output_image"], t["output_meta"]],
+                )
+                t["model_state"].change(
+                    fn=_on_model_change,
+                    inputs=[t["model_state"]],
+                    outputs=[t["steps"], t["cfg"]],
                 )
 
             with gr.Tab("ControlNet"):

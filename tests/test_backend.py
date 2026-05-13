@@ -93,3 +93,52 @@ def test_backend_generate_routes_controlnet(fake_backend, monkeypatch):
 def test_backend_generate_unknown_mode_raises(fake_backend):
     with pytest.raises(ValueError):
         fake_backend.generate(mode="dance", params={})
+
+
+def test_generate_with_retry_retries_on_gpu_aborted(fake_backend, monkeypatch):
+    call_count = {"n": 0}
+    original_generate = fake_backend.generate
+
+    def flaky(mode, params):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            from gradio.exceptions import Error
+
+            raise Error("GPU task aborted")
+        return original_generate(mode, params)
+
+    fake_backend.generate = flaky
+
+    _img, meta = backend.generate_with_retry(
+        fake_backend,
+        mode="t2i",
+        params=dict(
+            prompt="x",
+            negative_prompt="",
+            model="Turbo",
+            steps=8,
+            cfg=1.0,
+            width=1024,
+            height=1024,
+            seed=0,
+            lora_path=None,
+            lora_strength=0.0,
+        ),
+    )
+    assert call_count["n"] == 2  # one fail + one retry
+    assert meta["mode"] == "t2i"
+
+
+def test_generate_with_retry_does_not_retry_other_errors(fake_backend):
+    fake_backend.generate = lambda *a, **kw: (_ for _ in ()).throw(ValueError("not a gpu issue"))
+    with pytest.raises(ValueError):
+        backend.generate_with_retry(fake_backend, mode="t2i", params={})
+
+
+def test_duration_honors_retry_multiplier_in_params():
+    normal = backend.duration_for(mode="t2i", params=dict(model="Turbo", steps=8, width=1024, height=1024))
+    retry = backend.duration_for(
+        mode="t2i",
+        params=dict(model="Turbo", steps=8, width=1024, height=1024, __retry_multiplier__=2.0),
+    )
+    assert retry > normal
