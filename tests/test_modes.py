@@ -68,25 +68,33 @@ def test_t2i_base_passes_negative_prompt_and_cfg4(fake_pipe):
     assert kwargs["num_inference_steps"] == 25
 
 
-def test_t2i_swaps_transformer_via_model_pool(fake_pipe):
+def test_t2i_swaps_transformer_via_pool_index(fake_pipe):
+    """Base picks pool.model[0]; Turbo picks pool.model[1] (load-order indexed)."""
+    base_dit = object()
+    turbo_dit = object()
+    # Two z_image_dit entries in load order: Base first, Turbo second.
+    fake_pipe._zis_pool.model = [base_dit, turbo_dit, "vae_decoder_obj"]
+    fake_pipe._zis_pool.model_name = ["z_image_dit", "z_image_dit", "flux_vae_decoder"]
+
     modes.call_t2i(
         fake_pipe,
         params=dict(
-            prompt="x",
-            negative_prompt="",
-            model="Base",
-            steps=25,
-            cfg=4.0,
-            width=1024,
-            height=1024,
-            seed=0,
-            lora_path=None,
-            lora_strength=0.0,
+            prompt="x", negative_prompt="", model="Base",
+            steps=25, cfg=4.0, width=1024, height=1024, seed=0,
+            lora_path=None, lora_strength=0.0,
         ),
     )
-    fake_pipe.model_pool.fetch_model.assert_called()
-    call = fake_pipe.model_pool.fetch_model.call_args
-    assert call.args[0] == "z_image_dit"
+    assert fake_pipe.dit is base_dit
+
+    modes.call_t2i(
+        fake_pipe,
+        params=dict(
+            prompt="x", negative_prompt="", model="Turbo",
+            steps=8, cfg=1.0, width=1024, height=1024, seed=0,
+            lora_path=None, lora_strength=0.0,
+        ),
+    )
+    assert fake_pipe.dit is turbo_dit
 
 
 def test_controlnet_calls_preprocessor_then_pipeline(fake_pipe, monkeypatch):

@@ -26,27 +26,29 @@ def auto_device() -> str:
     return "cpu"
 
 
-def vram_limit_for(device: str, free_gb: float | None = None) -> float:
+def vram_limit_for(device: str, free_gb: float | None = None) -> float | None:
     """Conservative VRAM limit (GB) passed to DiffSynth's vram_management.
 
-    - CUDA: keep ~5% headroom (loaded models + scratch).
-    - MPS: half of unified memory (CPU still needs RAM), capped.
+    - CUDA: keep a few GB headroom (loaded models + scratch).
+    - MPS: ``None`` — PyTorch's MPS has no ``mem_get_info`` API, and DiffSynth's
+      ``check_free_vram`` raises AttributeError when called on MPS. Returning
+      ``None`` short-circuits the check (``vram/layers.py:195``) so module
+      swapping still works without the gate.
     - CPU: 0.0 (no offload budget).
     """
     if device == "cpu":
         return 0.0
+    if device == "mps":
+        # PyTorch's MPS backend has no ``torch.mps.mem_get_info``. DiffSynth's
+        # ``AutoWrappedModule.check_free_vram`` calls it and raises AttributeError.
+        # Returning None short-circuits the gate at vram/layers.py:195 so we keep
+        # CPU↔MPS module swapping (offload/onload) without the doomed check.
+        return None
+    # cuda
     if free_gb is None:
         import torch
 
-        if device == "cuda":
-            free_gb = torch.cuda.mem_get_info()[1] / (1024**3)
-        else:  # mps
-            # torch.mps has no mem_get_info on most builds; fall back to a safe constant.
-            free_gb = 24.0
-    if device == "mps":
-        # Use half of unified memory; clamp to 8 GB floor for safety.
-        return max(8.0, free_gb / 2)
-    # cuda
+        free_gb = torch.cuda.mem_get_info()[1] / (1024**3)
     return max(8.0, free_gb - 4.0)
 
 

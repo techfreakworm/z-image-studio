@@ -61,9 +61,18 @@ _GPU = (
 
 
 def _build_pipeline() -> Any:
-    """Construct the DiffSynth ZImagePipeline. Imported lazily to keep tests fast."""
+    """Construct a ZImagePipeline carrying BOTH Base and Turbo transformers.
+
+    DiffSynth's ``ZImagePipeline.from_pretrained`` builds a fresh ``ModelPool``
+    locally and throws it away after attaching ``pipe.dit`` etc. — so a later
+    transformer swap has nothing to switch between. We replicate the same
+    initialization manually and keep the pool on ``pipe._zis_pool`` so
+    :func:`modes._swap_transformer` can flip ``pipe.dit`` between the two
+    ``z_image_dit`` entries (Base loaded first, Turbo second per MODEL_CONFIGS).
+    """
     import torch
     from diffsynth.pipelines.z_image import ZImagePipeline
+    from transformers import AutoTokenizer
 
     import models
 
@@ -81,16 +90,35 @@ def _build_pipeline() -> Any:
             computation_device=device,
         )
 
-    pipe = ZImagePipeline.from_pretrained(
-        torch_dtype=torch.bfloat16,
-        device=device,
-        model_configs=models.build_diffsynth_configs(vram_cfg=vram_cfg),
-        tokenizer_config=models.build_diffsynth_configs(
-            (models.TOKENIZER_CONFIG,),
-            vram_cfg=None,
-        )[0],
+    pipe = ZImagePipeline(device=device, torch_dtype=torch.bfloat16)
+
+    # Load every safetensors listed in MODEL_CONFIGS — both transformers + shared
+    # text encoder + VAE + controlnet — into one pool.
+    pool = pipe.download_and_load_models(
+        models.build_diffsynth_configs(vram_cfg=vram_cfg),
         vram_limit=models.vram_limit_for(device),
     )
+    pipe._zis_pool = pool
+
+    pipe.text_encoder = pool.fetch_model("z_image_text_encoder")
+    pipe.dit = pool.fetch_model("z_image_dit")  # first match = Base per load order
+    pipe.vae_encoder = pool.fetch_model("flux_vae_encoder")
+    pipe.vae_decoder = pool.fetch_model("flux_vae_decoder")
+    pipe.controlnet = pool.fetch_model("z_image_controlnet")
+    # Optional image encoders that DiffSynth's ZImagePipeline references but
+    # aren't in our preload (Omni / image2lora). fetch_model returns None when
+    # absent — that's the documented "not an error" path.
+    pipe.image_encoder = pool.fetch_model("siglip_vision_model_428m")
+    pipe.siglip2_image_encoder = pool.fetch_model("siglip2_image_encoder")
+    pipe.dinov3_image_encoder = pool.fetch_model("dinov3_image_encoder")
+    pipe.image2lora_style = pool.fetch_model("z_image_image2lora_style")
+
+    # Tokenizer (Qwen3-4B tokenizer dir under Z-Image)
+    tok_cfg = models.build_diffsynth_configs((models.TOKENIZER_CONFIG,), vram_cfg=None)[0]
+    tok_cfg.download_if_necessary()
+    pipe.tokenizer = AutoTokenizer.from_pretrained(tok_cfg.path)
+
+    pipe.vram_management_enabled = pipe.check_vram_management_state()
     return pipe
 
 

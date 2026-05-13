@@ -14,6 +14,11 @@ from pathlib import Path
 # Must be set before any diffsynth import path is taken (backend imports it lazily).
 os.environ.setdefault("DIFFSYNTH_DOWNLOAD_SOURCE", "huggingface")
 
+# Apple Silicon: let PyTorch fall back to CPU for the small set of ops MPS doesn't
+# implement (some scaled-dot-product flavors, certain index ops). Without this,
+# DiffSynth crashes mid-pipeline on the first unsupported op rather than degrading.
+os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
+
 import gradio as gr
 
 import backend

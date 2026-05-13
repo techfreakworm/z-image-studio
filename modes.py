@@ -36,9 +36,23 @@ class T2IParams(TypedDict, total=False):
 
 
 def _swap_transformer(pipe: Any, model_name: str) -> None:
-    """Swap the active transformer in the pipeline's model pool."""
+    """Swap the active transformer between Base (index 0) and Turbo (index 1).
+
+    ``backend._build_pipeline`` loads both transformers into ``pipe._zis_pool``
+    and stores them under the same name ``z_image_dit``. DiffSynth's
+    ``ModelPool.fetch_model`` doesn't expose a variant kwarg — both entries
+    share the same name — so we index into ``pool.model`` directly. MODEL_CONFIGS
+    loads Base first, then Turbo (so index 0 = Base, index 1 = Turbo).
+
+    No-op if the pool is unavailable (e.g. mocked tests) or only one transformer
+    was loaded.
+    """
     variant = "z_image" if model_name == "Base" else "z_image_turbo"
-    pipe.dit = pipe.model_pool.fetch_model("z_image_dit", variant=variant)
+    pool = getattr(pipe, "_zis_pool", None)
+    if pool is not None:
+        dits = [m for m, n in zip(pool.model, pool.model_name, strict=False) if n == "z_image_dit"]
+        if len(dits) >= 2:
+            pipe.dit = dits[0 if model_name == "Base" else 1]
     try:
         pipe.dit._zis_variant = variant
     except (AttributeError, RuntimeError):

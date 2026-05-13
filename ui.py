@@ -9,7 +9,7 @@ import gradio as gr
 import preprocessors
 from tooltips import TOOLTIPS
 
-GITHUB_MODEL_ZOO_URL = "https://github.com/Tongyi-MAI/Z-Image#model-zoo"
+GITHUB_MODEL_ZOO_URL = "https://github.com/Tongyi-MAI/Z-Image#-model-zoo"
 
 
 def labeled_label(text: str, info_text: str) -> str:

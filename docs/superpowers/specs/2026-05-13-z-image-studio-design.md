@@ -195,14 +195,14 @@ The T2I tab's Model selector replaces `gr.Radio` with a custom HTML grid because
     <span class="dot"></span><span class="name">Turbo</span>
   </button>
   <a class="zis-model soon"
-     href="https://github.com/Tongyi-MAI/Z-Image#model-zoo"
+     href="https://github.com/Tongyi-MAI/Z-Image#-model-zoo"
      target="_blank" rel="noopener noreferrer">
     <span class="dot"></span>
     <span class="name">Edit<span class="ext">↗</span></span>
     <span class="soon-tag">soon</span>
   </a>
   <a class="zis-model soon"
-     href="https://github.com/Tongyi-MAI/Z-Image#model-zoo"
+     href="https://github.com/Tongyi-MAI/Z-Image#-model-zoo"
      target="_blank" rel="noopener noreferrer">
     <span class="dot"></span>
     <span class="name">Omni Base<span class="ext">↗</span></span>

@@ -33,9 +33,11 @@ def test_vram_limit_for_cuda_is_reasonable():
     assert 60.0 <= limit <= 80.0  # leave headroom
 
 
-def test_vram_limit_for_mps_is_unified_memory_aware():
-    limit = models.vram_limit_for("mps", free_gb=24.0)
-    assert 12.0 <= limit <= 22.0  # half of unified, headroom
+def test_vram_limit_for_mps_returns_none():
+    # MPS has no torch.mps.mem_get_info; DiffSynth's check_free_vram crashes
+    # on a numeric limit. None short-circuits the check (vram/layers.py:195).
+    assert models.vram_limit_for("mps", free_gb=24.0) is None
+    assert models.vram_limit_for("mps") is None
 
 
 def test_vram_limit_for_cpu_is_zero():

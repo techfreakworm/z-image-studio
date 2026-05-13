@@ -2892,7 +2892,7 @@ def test_model_selector_html_marks_current_as_on():
 
 def test_model_selector_html_includes_both_soon_cards_with_github_link():
     out = ui.model_selector_html(current="Turbo")
-    assert out.count("github.com/Tongyi-MAI/Z-Image#model-zoo") == 2
+    assert out.count("github.com/Tongyi-MAI/Z-Image#-model-zoo") == 2
     assert "Edit" in out
     assert "Omni Base" in out
     assert "soon-tag" in out
@@ -2920,7 +2920,7 @@ from __future__ import annotations
 
 from html import escape
 
-GITHUB_MODEL_ZOO_URL = "https://github.com/Tongyi-MAI/Z-Image#model-zoo"
+GITHUB_MODEL_ZOO_URL = "https://github.com/Tongyi-MAI/Z-Image#-model-zoo"
 
 
 def labeled_label(text: str, info_text: str) -> str:
