@@ -1,4 +1,5 @@
 """ZImageStudioBackend — wraps the DiffSynth pipeline; applies @spaces.GPU on HF Spaces."""
+
 from __future__ import annotations
 
 import os
@@ -12,17 +13,16 @@ except ImportError:
 
 import modes
 
-
 _BASE_DURATION_S: dict[str, int] = {
-    "t2i":        20,   # fixed setup + decode
-    "controlnet": 30,   # + preprocessor + control patch
-    "upscale":    50,   # + realesrgan pixel-space step
+    "t2i": 20,  # fixed setup + decode
+    "controlnet": 30,  # + preprocessor + control patch
+    "upscale": 50,  # + realesrgan pixel-space step
 }
 _PER_STEP_S: dict[tuple[str, str], float] = {
-    ("t2i", "Base"):  2.4,
+    ("t2i", "Base"): 2.4,
     ("t2i", "Turbo"): 1.6,
     ("controlnet", "Turbo"): 2.0,
-    ("upscale", "Turbo"):    1.6,
+    ("upscale", "Turbo"): 1.6,
 }
 
 
@@ -51,8 +51,11 @@ def _identity(fn):
 
 
 _ON_SPACES = bool(os.environ.get("SPACES_ZERO_GPU"))
-_GPU = spaces.GPU(duration=lambda *a, **kw: duration_for(*a[1:3], **kw)) \
-       if (spaces is not None and _ON_SPACES) else _identity
+_GPU = (
+    spaces.GPU(duration=lambda *a, **kw: duration_for(*a[1:3], **kw))
+    if (spaces is not None and _ON_SPACES)
+    else _identity
+)
 
 
 def _build_pipeline() -> Any:
@@ -66,10 +69,14 @@ def _build_pipeline() -> Any:
     vram_cfg: dict[str, Any] = {}
     if device != "cpu":
         vram_cfg = dict(
-            offload_dtype=torch.bfloat16, offload_device="cpu",
-            onload_dtype=torch.bfloat16,  onload_device="cpu",
-            preparing_dtype=torch.bfloat16, preparing_device=device,
-            computation_dtype=torch.bfloat16, computation_device=device,
+            offload_dtype=torch.bfloat16,
+            offload_device="cpu",
+            onload_dtype=torch.bfloat16,
+            onload_device="cpu",
+            preparing_dtype=torch.bfloat16,
+            preparing_device=device,
+            computation_dtype=torch.bfloat16,
+            computation_device=device,
         )
 
     pipe = ZImagePipeline.from_pretrained(
@@ -77,7 +84,8 @@ def _build_pipeline() -> Any:
         device=device,
         model_configs=models.build_diffsynth_configs(vram_cfg=vram_cfg),
         tokenizer_config=models.build_diffsynth_configs(
-            (models.TOKENIZER_CONFIG,), vram_cfg=None,
+            (models.TOKENIZER_CONFIG,),
+            vram_cfg=None,
         )[0],
         vram_limit=models.vram_limit_for(device),
     )
@@ -85,9 +93,9 @@ def _build_pipeline() -> Any:
 
 
 _DISPATCH = {
-    "t2i":        modes.call_t2i,
+    "t2i": modes.call_t2i,
     "controlnet": modes.call_controlnet,
-    "upscale":    modes.call_upscale,
+    "upscale": modes.call_upscale,
 }
 
 

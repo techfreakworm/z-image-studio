@@ -1,3 +1,8 @@
+from unittest.mock import MagicMock
+
+import pytest
+from PIL import Image
+
 import backend
 
 
@@ -23,8 +28,9 @@ def test_duration_clamps_at_60():
 
 def test_duration_multiplier_scales_up():
     base = backend.duration_for(mode="t2i", params=dict(model="Turbo", steps=8, width=1024, height=1024))
-    retry = backend.duration_for(mode="t2i", params=dict(model="Turbo", steps=8, width=1024, height=1024),
-                                  multiplier=2.0)
+    retry = backend.duration_for(
+        mode="t2i", params=dict(model="Turbo", steps=8, width=1024, height=1024), multiplier=2.0
+    )
     assert retry > base
 
 
@@ -32,12 +38,6 @@ def test_duration_upscale_has_realesrgan_overhead():
     t2i = backend.duration_for(mode="t2i", params=dict(model="Turbo", steps=8, width=1024, height=1024))
     upsc = backend.duration_for(mode="upscale", params=dict(refine_steps=5, width=1024, height=1024))
     assert upsc > t2i
-
-
-from unittest.mock import MagicMock
-
-import pytest
-from PIL import Image
 
 
 @pytest.fixture
@@ -54,9 +54,18 @@ def fake_backend(monkeypatch):
 def test_backend_generate_routes_t2i(fake_backend):
     img, meta = fake_backend.generate(
         mode="t2i",
-        params=dict(prompt="cat", negative_prompt="", model="Turbo",
-                    steps=8, cfg=1.0, width=1024, height=1024, seed=42,
-                    lora_path=None, lora_strength=0.0),
+        params=dict(
+            prompt="cat",
+            negative_prompt="",
+            model="Turbo",
+            steps=8,
+            cfg=1.0,
+            width=1024,
+            height=1024,
+            seed=42,
+            lora_path=None,
+            lora_strength=0.0,
+        ),
     )
     assert isinstance(img, Image.Image)
     assert meta["mode"] == "t2i"
@@ -64,13 +73,19 @@ def test_backend_generate_routes_t2i(fake_backend):
 
 
 def test_backend_generate_routes_controlnet(fake_backend, monkeypatch):
-    monkeypatch.setattr(backend.modes, "preprocessors",
-                        type("P", (), {"run": staticmethod(lambda m, i: i)}))
-    img, meta = fake_backend.generate(
+    monkeypatch.setattr(backend.modes, "preprocessors", type("P", (), {"run": staticmethod(lambda m, i: i)}))
+    _img, meta = fake_backend.generate(
         mode="controlnet",
-        params=dict(prompt="cat", input_image=Image.new("RGB", (64, 64)),
-                    preprocessor="Canny", controlnet_scale=1.0,
-                    steps=9, seed=0, lora_path=None, lora_strength=0.0),
+        params=dict(
+            prompt="cat",
+            input_image=Image.new("RGB", (64, 64)),
+            preprocessor="Canny",
+            controlnet_scale=1.0,
+            steps=9,
+            seed=0,
+            lora_path=None,
+            lora_strength=0.0,
+        ),
     )
     assert meta["mode"] == "controlnet"
 

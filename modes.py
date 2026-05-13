@@ -1,4 +1,5 @@
 """Mode handlers — pure functions over a ZImagePipeline + params dict."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -24,7 +25,7 @@ except ImportError:
 class T2IParams(TypedDict, total=False):
     prompt: str
     negative_prompt: str
-    model: str          # "Base" | "Turbo"
+    model: str  # "Base" | "Turbo"
     steps: int
     cfg: float
     width: int
@@ -66,9 +67,13 @@ def call_t2i(pipe: Any, params: T2IParams) -> tuple[Image.Image, dict[str, Any]]
         image = pipe(**kwargs)
 
     meta = dict(
-        mode="t2i", model=model_name,
-        steps=kwargs["num_inference_steps"], cfg=kwargs["cfg_scale"],
-        seed=kwargs["seed"], width=kwargs["width"], height=kwargs["height"],
+        mode="t2i",
+        model=model_name,
+        steps=kwargs["num_inference_steps"],
+        cfg=kwargs["cfg_scale"],
+        seed=kwargs["seed"],
+        width=kwargs["width"],
+        height=kwargs["height"],
         lora=str(params.get("lora_path")) if params.get("lora_path") else None,
         lora_strength=params.get("lora_strength", 0.0),
     )
@@ -103,11 +108,15 @@ def call_controlnet(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dic
         image = pipe(**kwargs)
 
     meta = dict(
-        mode="controlnet", model="Turbo",
+        mode="controlnet",
+        model="Turbo",
         preprocessor=preproc_mode,
         controlnet_scale=cn_input.scale,
-        steps=kwargs["num_inference_steps"], cfg=1.0,
-        seed=kwargs["seed"], width=kwargs["width"], height=kwargs["height"],
+        steps=kwargs["num_inference_steps"],
+        cfg=1.0,
+        seed=kwargs["seed"],
+        width=kwargs["width"],
+        height=kwargs["height"],
         lora=str(params.get("lora_path")) if params.get("lora_path") else None,
         lora_strength=params.get("lora_strength", 0.0),
     )
@@ -138,10 +147,13 @@ def call_upscale(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dict[s
         image = pipe(**kwargs)
 
     meta = dict(
-        mode="upscale", model="Turbo",
+        mode="upscale",
+        model="Turbo",
         refine_steps=kwargs["num_inference_steps"],
         refine_denoise=kwargs["denoising_strength"],
-        seed=kwargs["seed"], width=upscaled.size[0], height=upscaled.size[1],
+        seed=kwargs["seed"],
+        width=upscaled.size[0],
+        height=upscaled.size[1],
         lora=str(params.get("lora_path")) if params.get("lora_path") else None,
         lora_strength=params.get("lora_strength", 0.0),
     )

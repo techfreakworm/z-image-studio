@@ -1,12 +1,14 @@
 """LoRA file validation and apply/revert context manager."""
+
 from __future__ import annotations
 
 import json
 import struct
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 ZIMAGE_LORA_PREFIXES = ("transformer.", "dit.", "model.transformer.")
 
@@ -97,6 +99,7 @@ def applied_lora(pipe: Any, path: Path | str | None, strength: float) -> Iterato
 def _apply_lora_impl(pipe: Any, path: Path | str, strength: float) -> None:
     """Apply a LoRA to ``pipe.dit``. Imports DiffSynth lazily for testability."""
     from diffsynth.utils.lora import merge_lora
+
     merge_lora(pipe.dit, str(path), alpha=float(strength))
 
 
@@ -108,6 +111,7 @@ def _revert_lora_impl(pipe: Any) -> None:
     """
     try:
         from diffsynth.utils.lora import unmerge_lora
+
         unmerge_lora(pipe.dit)
         return
     except ImportError:

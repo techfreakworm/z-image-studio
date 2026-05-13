@@ -1,4 +1,5 @@
 """ControlNet preprocessors — lazy imports so an unused mode pays no cost."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -25,6 +26,7 @@ def run(mode: str, image: Image.Image | None) -> Image.Image:
 def _run_canny(image: Image.Image) -> Image.Image:
     import cv2
     import numpy as np
+
     arr = np.array(image.convert("RGB"))
     gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
     edges = cv2.Canny(gray, threshold1=100, threshold2=200)
@@ -55,5 +57,6 @@ def _get_processor(name: str) -> Any:
     """Lazy-init and cache a controlnet_aux Processor."""
     if name not in _PROCESSOR_CACHE:
         from controlnet_aux.processor import Processor
+
         _PROCESSOR_CACHE[name] = Processor(name)
     return _PROCESSOR_CACHE[name]

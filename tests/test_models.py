@@ -1,9 +1,13 @@
+import importlib
 import os
 from unittest import mock
+
+import pytest
 
 import models
 
 
+@pytest.mark.skipif(importlib.util.find_spec("torch") is None, reason="torch not installed")
 def test_auto_device_returns_cuda_or_mps_or_cpu():
     dev = models.auto_device()
     assert dev in ("cuda", "mps", "cpu")

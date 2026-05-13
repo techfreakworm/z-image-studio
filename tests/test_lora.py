@@ -15,11 +15,14 @@ def _write_safetensors(path: Path, header: dict) -> None:
 
 def test_sniff_valid_zimage_lora_returns_metadata(tmp_path):
     p = tmp_path / "ok.safetensors"
-    _write_safetensors(p, {
-        "transformer.layer1.lora_A.weight": {"dtype": "BF16", "shape": [64, 3840]},
-        "transformer.layer1.lora_B.weight": {"dtype": "BF16", "shape": [3840, 64]},
-        "__metadata__": {"rank": "64"},
-    })
+    _write_safetensors(
+        p,
+        {
+            "transformer.layer1.lora_A.weight": {"dtype": "BF16", "shape": [64, 3840]},
+            "transformer.layer1.lora_B.weight": {"dtype": "BF16", "shape": [3840, 64]},
+            "__metadata__": {"rank": "64"},
+        },
+    )
     info = lora.sniff(p)
     assert info.rank == 64
     assert info.target == "transformer"
@@ -36,9 +39,12 @@ def test_sniff_rejects_non_safetensors(tmp_path):
 
 def test_sniff_rejects_non_zimage_keys(tmp_path):
     p = tmp_path / "wrong.safetensors"
-    _write_safetensors(p, {
-        "down_blocks.0.weight": {"dtype": "F32", "shape": [320, 320]},
-    })
+    _write_safetensors(
+        p,
+        {
+            "down_blocks.0.weight": {"dtype": "F32", "shape": [320, 320]},
+        },
+    )
     with pytest.raises(lora.LoRAValidationError) as exc:
         lora.sniff(p)
     msg = str(exc.value).lower()
@@ -47,23 +53,29 @@ def test_sniff_rejects_non_zimage_keys(tmp_path):
 
 class _FakePipe:
     """Minimal stand-in for DiffSynth's ZImagePipeline.dit hook surface."""
+
     def __init__(self):
-        self.applied = []   # list of (path, strength) tuples
+        self.applied = []  # list of (path, strength) tuples
         self.reverted = []
 
 
 def test_applied_lora_calls_apply_then_revert(tmp_path, monkeypatch):
     p = tmp_path / "ok.safetensors"
-    _write_safetensors(p, {
-        "transformer.x.lora_A.weight": {"dtype": "BF16", "shape": [32, 3840]},
-        "transformer.x.lora_B.weight": {"dtype": "BF16", "shape": [3840, 32]},
-    })
+    _write_safetensors(
+        p,
+        {
+            "transformer.x.lora_A.weight": {"dtype": "BF16", "shape": [32, 3840]},
+            "transformer.x.lora_B.weight": {"dtype": "BF16", "shape": [3840, 32]},
+        },
+    )
     pipe = _FakePipe()
 
     def fake_apply(pipe, path, strength):
         pipe.applied.append((str(path), strength))
+
     def fake_revert(pipe):
         pipe.reverted.append(True)
+
     monkeypatch.setattr(lora, "_apply_lora_impl", fake_apply)
     monkeypatch.setattr(lora, "_revert_lora_impl", fake_revert)
 
@@ -88,10 +100,13 @@ def test_applied_lora_with_none_is_a_noop(tmp_path, monkeypatch):
 
 def test_applied_lora_reverts_on_exception(tmp_path, monkeypatch):
     p = tmp_path / "ok.safetensors"
-    _write_safetensors(p, {
-        "transformer.x.lora_A.weight": {"dtype": "BF16", "shape": [16, 3840]},
-        "transformer.x.lora_B.weight": {"dtype": "BF16", "shape": [3840, 16]},
-    })
+    _write_safetensors(
+        p,
+        {
+            "transformer.x.lora_A.weight": {"dtype": "BF16", "shape": [16, 3840]},
+            "transformer.x.lora_B.weight": {"dtype": "BF16", "shape": [3840, 16]},
+        },
+    )
     pipe = _FakePipe()
     monkeypatch.setattr(lora, "_apply_lora_impl", lambda pipe, p, s: pipe.applied.append((p, s)))
     monkeypatch.setattr(lora, "_revert_lora_impl", lambda pipe: pipe.reverted.append(True))

@@ -3,6 +3,7 @@
 This module only handles the *pixel-space* upscale. The Z-Image-Turbo refinement
 pass (img2img at denoise=0.33) lives in :mod:`modes` since it shares the pipeline.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,8 +27,8 @@ _MODEL_CACHE: dict[str, Any] = {}
 def _realesrgan_4x(model_path: Path | str, image: Image.Image) -> Image.Image:
     """Run RealESRGAN x4plus on ``image``. Caches the model in-process."""
     import numpy as np
-    from realesrgan import RealESRGANer
     from basicsr.archs.rrdbnet_arch import RRDBNet
+    from realesrgan import RealESRGANer
 
     key = str(model_path)
     if key not in _MODEL_CACHE:
@@ -36,10 +37,10 @@ def _realesrgan_4x(model_path: Path | str, image: Image.Image) -> Image.Image:
             scale=4,
             model_path=key,
             model=net,
-            tile=512,        # split into tiles to avoid OOM on large inputs
+            tile=512,  # split into tiles to avoid OOM on large inputs
             tile_pad=10,
             pre_pad=0,
-            half=False,      # bf16 elsewhere; keep this fp32 for stability
+            half=False,  # bf16 elsewhere; keep this fp32 for stability
             gpu_id=None,
         )
 

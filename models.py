@@ -1,8 +1,9 @@
 """Device autodetect, ZImagePipeline ModelConfig registry, and (Task 4) HF cache mirror."""
+
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,7 @@ def on_spaces() -> bool:
 def auto_device() -> str:
     """Detect the best available compute device."""
     import torch
+
     if torch.cuda.is_available():
         return "cuda"
     if torch.backends.mps.is_available():
@@ -35,8 +37,9 @@ def vram_limit_for(device: str, free_gb: float | None = None) -> float:
         return 0.0
     if free_gb is None:
         import torch
+
         if device == "cuda":
-            free_gb = torch.cuda.mem_get_info()[1] / (1024 ** 3)
+            free_gb = torch.cuda.mem_get_info()[1] / (1024**3)
         else:  # mps
             # torch.mps has no mem_get_info on most builds; fall back to a safe constant.
             free_gb = 24.0
@@ -55,6 +58,7 @@ class ModelConfig:
     ``diffsynth.core.ModelConfig`` instance is built on demand by
     :func:`build_diffsynth_configs`.
     """
+
     model_id: str
     origin_file_pattern: str
     description: str = ""
@@ -62,23 +66,24 @@ class ModelConfig:
 
 MODEL_CONFIGS: tuple[ModelConfig, ...] = (
     # Base
-    ModelConfig("Tongyi-MAI/Z-Image", "transformer/*.safetensors",
-                "Z-Image base transformer (25 steps, cfg=4)"),
-    ModelConfig("Tongyi-MAI/Z-Image", "text_encoder/*.safetensors",
-                "Qwen3-4B text encoder — shared between base + turbo"),
-    ModelConfig("Tongyi-MAI/Z-Image", "vae/diffusion_pytorch_model.safetensors",
-                "Flux-family VAE — shared between base + turbo"),
+    ModelConfig("Tongyi-MAI/Z-Image", "transformer/*.safetensors", "Z-Image base transformer (25 steps, cfg=4)"),
+    ModelConfig(
+        "Tongyi-MAI/Z-Image", "text_encoder/*.safetensors", "Qwen3-4B text encoder — shared between base + turbo"
+    ),
+    ModelConfig(
+        "Tongyi-MAI/Z-Image", "vae/diffusion_pytorch_model.safetensors", "Flux-family VAE — shared between base + turbo"
+    ),
     # Turbo (transformer only — encoder + VAE come from the Z-Image entry above)
-    ModelConfig("Tongyi-MAI/Z-Image-Turbo", "transformer/*.safetensors",
-                "Z-Image-Turbo transformer (8 steps, cfg=1)"),
+    ModelConfig("Tongyi-MAI/Z-Image-Turbo", "transformer/*.safetensors", "Z-Image-Turbo transformer (8 steps, cfg=1)"),
     # ControlNet Union 2.1 (eager preload per spec; can move to lazy if RAM is tight)
-    ModelConfig("PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1",
-                "Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors",
-                "ControlNet Union 2.1 — canny/depth/pose"),
+    ModelConfig(
+        "PAI/Z-Image-Turbo-Fun-Controlnet-Union-2.1",
+        "Z-Image-Turbo-Fun-Controlnet-Union-2.1-8steps.safetensors",
+        "ControlNet Union 2.1 — canny/depth/pose",
+    ),
 )
 
-TOKENIZER_CONFIG = ModelConfig("Tongyi-MAI/Z-Image", "tokenizer/",
-                                "Qwen3-4B tokenizer")
+TOKENIZER_CONFIG = ModelConfig("Tongyi-MAI/Z-Image", "tokenizer/", "Qwen3-4B tokenizer")
 
 
 def build_diffsynth_configs(
@@ -91,9 +96,9 @@ def build_diffsynth_configs(
     block (offload_dtype, offload_device, etc.) that DiffSynth's low-VRAM examples use.
     """
     from diffsynth.core import ModelConfig as DSConfig
+
     return [
-        DSConfig(model_id=c.model_id, origin_file_pattern=c.origin_file_pattern, **(vram_cfg or {}))
-        for c in configs
+        DSConfig(model_id=c.model_id, origin_file_pattern=c.origin_file_pattern, **(vram_cfg or {})) for c in configs
     ]
 
 

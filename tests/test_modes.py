@@ -23,10 +23,13 @@ def test_t2i_turbo_builds_minimal_call(fake_pipe):
             prompt="a cat",
             negative_prompt="",
             model="Turbo",
-            steps=8, cfg=1.0,
-            width=1024, height=1024,
+            steps=8,
+            cfg=1.0,
+            width=1024,
+            height=1024,
             seed=42,
-            lora_path=None, lora_strength=0.0,
+            lora_path=None,
+            lora_strength=0.0,
         ),
     )
     fake_pipe.assert_called_once()
@@ -47,10 +50,16 @@ def test_t2i_base_passes_negative_prompt_and_cfg4(fake_pipe):
     modes.call_t2i(
         fake_pipe,
         params=dict(
-            prompt="a cat", negative_prompt="blurry, lowres",
-            model="Base", steps=25, cfg=4.0,
-            width=1024, height=1024, seed=42,
-            lora_path=None, lora_strength=0.0,
+            prompt="a cat",
+            negative_prompt="blurry, lowres",
+            model="Base",
+            steps=25,
+            cfg=4.0,
+            width=1024,
+            height=1024,
+            seed=42,
+            lora_path=None,
+            lora_strength=0.0,
         ),
     )
     kwargs = fake_pipe.call_args.kwargs
@@ -62,8 +71,18 @@ def test_t2i_base_passes_negative_prompt_and_cfg4(fake_pipe):
 def test_t2i_swaps_transformer_via_model_pool(fake_pipe):
     modes.call_t2i(
         fake_pipe,
-        params=dict(prompt="x", negative_prompt="", model="Base", steps=25, cfg=4.0,
-                    width=1024, height=1024, seed=0, lora_path=None, lora_strength=0.0),
+        params=dict(
+            prompt="x",
+            negative_prompt="",
+            model="Base",
+            steps=25,
+            cfg=4.0,
+            width=1024,
+            height=1024,
+            seed=0,
+            lora_path=None,
+            lora_strength=0.0,
+        ),
     )
     fake_pipe.model_pool.fetch_model.assert_called()
     call = fake_pipe.model_pool.fetch_model.call_args
@@ -72,13 +91,15 @@ def test_t2i_swaps_transformer_via_model_pool(fake_pipe):
 
 def test_controlnet_calls_preprocessor_then_pipeline(fake_pipe, monkeypatch):
     canny_called = []
+
     def fake_run(mode, img):
         canny_called.append((mode, img.size))
         return img  # passthrough for test
+
     monkeypatch.setattr(modes, "preprocessors", type("P", (), {"run": staticmethod(fake_run)}))
 
     input_image = Image.new("RGB", (1024, 1024))
-    out, meta = modes.call_controlnet(
+    _out, meta = modes.call_controlnet(
         fake_pipe,
         params=dict(
             prompt="cinematic portrait",
@@ -87,7 +108,8 @@ def test_controlnet_calls_preprocessor_then_pipeline(fake_pipe, monkeypatch):
             controlnet_scale=1.0,
             steps=9,
             seed=42,
-            lora_path=None, lora_strength=0.0,
+            lora_path=None,
+            lora_strength=0.0,
         ),
     )
 
@@ -106,22 +128,31 @@ def test_controlnet_rejects_missing_input_image(fake_pipe):
     with pytest.raises(ValueError):
         modes.call_controlnet(
             fake_pipe,
-            params=dict(prompt="x", input_image=None, preprocessor="Canny",
-                        controlnet_scale=1.0, steps=9, seed=0,
-                        lora_path=None, lora_strength=0.0),
+            params=dict(
+                prompt="x",
+                input_image=None,
+                preprocessor="Canny",
+                controlnet_scale=1.0,
+                steps=9,
+                seed=0,
+                lora_path=None,
+                lora_strength=0.0,
+            ),
         )
 
 
 def test_upscale_runs_realesrgan_then_pipeline(fake_pipe, monkeypatch):
     calls = {"upscale": None}
+
     def fake_2x(img, model_path):
         calls["upscale"] = (img.size, str(model_path))
         w, h = img.size
         return img.resize((w * 2, h * 2), Image.LANCZOS)
+
     monkeypatch.setattr(modes, "upscale", type("U", (), {"realesrgan_2x": staticmethod(fake_2x)}))
 
     input_image = Image.new("RGB", (512, 512))
-    out, meta = modes.call_upscale(
+    _out, meta = modes.call_upscale(
         fake_pipe,
         params=dict(
             prompt="masterpiece, 8k",
@@ -129,7 +160,8 @@ def test_upscale_runs_realesrgan_then_pipeline(fake_pipe, monkeypatch):
             refine_steps=5,
             refine_denoise=0.33,
             seed=42,
-            lora_path=None, lora_strength=0.0,
+            lora_path=None,
+            lora_strength=0.0,
             esrgan_model_path="/fake/path/RealESRGAN_x4plus.pth",
         ),
     )
@@ -145,7 +177,16 @@ def test_upscale_runs_realesrgan_then_pipeline(fake_pipe, monkeypatch):
 
 def test_upscale_rejects_missing_image(fake_pipe):
     with pytest.raises(ValueError):
-        modes.call_upscale(fake_pipe, params=dict(prompt="x", input_image=None,
-                                                   refine_steps=5, refine_denoise=0.33, seed=0,
-                                                   lora_path=None, lora_strength=0.0,
-                                                   esrgan_model_path="/fake.pth"))
+        modes.call_upscale(
+            fake_pipe,
+            params=dict(
+                prompt="x",
+                input_image=None,
+                refine_steps=5,
+                refine_denoise=0.33,
+                seed=0,
+                lora_path=None,
+                lora_strength=0.0,
+                esrgan_model_path="/fake.pth",
+            ),
+        )
