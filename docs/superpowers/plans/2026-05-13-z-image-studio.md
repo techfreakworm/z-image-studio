@@ -2622,17 +2622,17 @@ Additions decided after Tasks 1–3 landed. References spec sections 4.6 (toolti
 
 ---
 
-### Task A: copy.py — TOOLTIPS dict
+### Task A: tooltips.py — TOOLTIPS dict
 
 **Files:**
-- Create: `copy.py`
-- Test: `tests/test_copy.py`
+- Create: `tooltips.py`
+- Test: `tests/test_tooltips.py`
 
 - [ ] **Step A.1: Write failing test**
 
 ```python
-# tests/test_copy.py
-import copy as zis_copy  # name shadows the stdlib `copy` but the module is unrelated
+# tests/test_tooltips.py
+import tooltips
 
 REQUIRED_KEYS = {
     "prompt", "negative_prompt", "model", "lora", "lora_strength",
@@ -2642,21 +2642,21 @@ REQUIRED_KEYS = {
 }
 
 def test_tooltips_has_all_required_keys():
-    assert REQUIRED_KEYS <= set(zis_copy.TOOLTIPS)
+    assert REQUIRED_KEYS <= set(tooltips.TOOLTIPS)
 
 def test_tooltips_values_are_non_empty_strings():
-    for key, val in zis_copy.TOOLTIPS.items():
+    for key, val in tooltips.TOOLTIPS.items():
         assert isinstance(val, str) and val.strip(), f"{key} is empty or non-string"
 
 def test_tooltips_values_are_short_enough_for_a_tooltip():
     # 200-char ceiling so tooltips don't overflow on phone
-    for key, val in zis_copy.TOOLTIPS.items():
+    for key, val in tooltips.TOOLTIPS.items():
         assert len(val) <= 200, f"{key} is too long for a tooltip ({len(val)} chars)"
 ```
 
-- [ ] **Step A.2: Run test — expect FAIL** (`pytest tests/test_copy.py -v` → ModuleNotFoundError).
+- [ ] **Step A.2: Run test — expect FAIL** (`pytest tests/test_tooltips.py -v` → ModuleNotFoundError).
 
-- [ ] **Step A.3: Implement `copy.py`**
+- [ ] **Step A.3: Implement `tooltips.py`**
 
 ```python
 """User-facing copy — tooltips and similar short strings.
@@ -2692,7 +2692,7 @@ TOOLTIPS: dict[str, str] = {
 - [ ] **Step A.5: Commit**
 
 ```bash
-git add copy.py tests/test_copy.py
+git add tooltips.py tests/test_tooltips.py
 git commit -m "feat(copy): tooltip strings dict — one source of truth for param descriptions"
 ```
 

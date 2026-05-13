@@ -137,7 +137,7 @@ Every user-facing param gets an info-icon affordance: a subtle circled `i` super
 
 `gr.HTML(labeled_label("Steps", TOOLTIPS["steps"]))` is placed immediately before the corresponding `gr.Slider` (which uses `show_label=False`). One `gr.HTML` per labeled component.
 
-**Tooltip text source.** All strings live in a new `copy.py` module as a flat dict `TOOLTIPS[component_id]`. Keeping them out of `ui.py` lets copy edits stay separate from component wiring. Initial keys: `prompt`, `negative_prompt`, `model`, `lora`, `lora_strength`, `steps`, `cfg`, `width`, `height`, `seed`, `controlnet_image`, `controlnet_preprocessor`, `controlnet_scale`, `upscale_image`, `refine_steps`, `refine_denoise`, `output`.
+**Tooltip text source.** All strings live in a new `tooltips.py` module as a flat dict `TOOLTIPS[component_id]`. Keeping them out of `ui.py` lets copy edits stay separate from component wiring. Initial keys: `prompt`, `negative_prompt`, `model`, `lora`, `lora_strength`, `steps`, `cfg`, `width`, `height`, `seed`, `controlnet_image`, `controlnet_preprocessor`, `controlnet_scale`, `upscale_image`, `refine_steps`, `refine_denoise`, `output`.
 
 **Styling.** Pure CSS in `theme.CSS`:
 
@@ -293,7 +293,7 @@ llm/z-image-studio/
 ├── lora.py             # LoRA safetensors header sniffer + apply/revert ctx
 ├── ui.py               # Per-tab Gradio component builders + labeled_label() + model selector HTML helpers
 ├── theme.py            # Amber tokens + gr.themes.Base subclass + CSS string (includes .zis-info / .zis-models / .zis-model rules)
-├── copy.py             # TOOLTIPS dict — short info strings per component id (one source of truth)
+├── tooltips.py             # TOOLTIPS dict — short info strings per component id (one source of truth)
 ├── pyproject.toml      # ruff config; py311
 ├── requirements.txt    # diffsynth-studio, gradio==5.x, spaces, controlnet-aux, realesrgan, ...
 ├── README.md           # HF Space YAML frontmatter (preload_from_hub) + user docs
@@ -483,7 +483,7 @@ No mocks for `ZImagePipeline` internals — only for its `__call__` boundary. Te
 4. **License MIT** — say otherwise during review if you'd prefer Apache-2.0.
 5. **ControlNet preload is in the YAML** — accept the larger startup at the gain of zero first-ControlNet-call wait. If RAM is tight at boot we'll move it to lazy.
 6. **Custom model selector replaces `gr.Radio` in T2I** (per § 4.7) — necessary because two of the four cards are external-link `<a>` elements, not selectable options. A hidden `gr.Textbox` carries the state.
-7. **Tooltips wrap every param via a `labeled_label()` HTML helper** (per § 4.6) — every `gr.Slider`/`gr.Textbox`/`gr.Image`/`gr.Dropdown`/`gr.Number`/`gr.File` uses `show_label=False` with a preceding `gr.HTML(labeled_label(...))`. Tooltip strings centralized in `copy.py`.
+7. **Tooltips wrap every param via a `labeled_label()` HTML helper** (per § 4.6) — every `gr.Slider`/`gr.Textbox`/`gr.Image`/`gr.Dropdown`/`gr.Number`/`gr.File` uses `show_label=False` with a preceding `gr.HTML(labeled_label(...))`. Tooltip strings centralized in `tooltips.py`.
 8. **Slider typing comes free** — `gr.Slider` already renders an editable numeric input next to the track (Gradio default; matches LTX repo). No custom widget needed.
 
 **Out of scope additions (v1):**

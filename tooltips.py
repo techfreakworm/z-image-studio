@@ -1,4 +1,4 @@
-"""User-facing copy — tooltips and similar short strings.
+"""Tooltip strings for every labeled UI component.
 
 Kept separate from ``ui.py`` so copy edits don't touch component wiring. Every
 key here MUST be referenced from a labeled component in ``ui.py`` (and vice versa).

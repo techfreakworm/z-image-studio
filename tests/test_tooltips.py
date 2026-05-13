@@ -1,4 +1,4 @@
-import copy as zis_copy  # name shadows the stdlib `copy` but the module is unrelated
+import tooltips
 
 REQUIRED_KEYS = {
     "prompt", "negative_prompt", "model", "lora", "lora_strength",
@@ -8,12 +8,12 @@ REQUIRED_KEYS = {
 }
 
 def test_tooltips_has_all_required_keys():
-    assert REQUIRED_KEYS <= set(zis_copy.TOOLTIPS)
+    assert REQUIRED_KEYS <= set(tooltips.TOOLTIPS)
 
 def test_tooltips_values_are_non_empty_strings():
-    for key, val in zis_copy.TOOLTIPS.items():
+    for key, val in tooltips.TOOLTIPS.items():
         assert isinstance(val, str) and val.strip(), f"{key} is empty or non-string"
 
 def test_tooltips_values_are_short_enough_for_a_tooltip():
-    for key, val in zis_copy.TOOLTIPS.items():
+    for key, val in tooltips.TOOLTIPS.items():
         assert len(val) <= 200, f"{key} is too long for a tooltip ({len(val)} chars)"
