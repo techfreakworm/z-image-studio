@@ -1,7 +1,7 @@
 # Core
 gradio==5.50.0
 spaces==0.30.0
-diffsynth-studio>=0.5.0
+diffsynth @ git+https://github.com/modelscope/DiffSynth-Studio.git
 torch>=2.4
 safetensors>=0.4.5
 huggingface-hub>=0.27
