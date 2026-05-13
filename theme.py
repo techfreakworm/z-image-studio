@@ -128,4 +128,48 @@ CSS: str = """
     margin-right: 6px;
     vertical-align: middle;
 }
+
+/* CTA bar — single-line "drop a like / follow for what's next". Subtle by
+   design: dim text, faintest amber wash, hairline underline. Avoids the
+   needy "PLEASE STAR THE REPO" energy. */
+.zis-cta {
+    margin: 4px 0 10px 0;
+    padding: 8px 14px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #988B7C;
+    background:
+      linear-gradient(180deg, rgba(255,176,46,0.05), rgba(255,176,46,0.02));
+    border: 1px solid #2A241E;
+    border-radius: 8px;
+    text-align: center;
+}
+.zis-cta strong { color: #F0E8DD; font-weight: 600; }
+.zis-cta .zis-cta-heart {
+    display: inline-block;
+    color: #FFB02E;
+    transform: translateY(-1px);
+    margin: 0 1px;
+    animation: zis-cta-pulse 2.4s ease-in-out infinite;
+}
+@keyframes zis-cta-pulse {
+    0%, 60%, 100% { transform: translateY(-1px) scale(1); }
+    30% { transform: translateY(-1px) scale(1.18); }
+}
+.zis-cta .zis-cta-sep { margin: 0 10px; color: #3A3128; }
+.zis-cta a {
+    color: #FFB02E;
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(255,176,46,0.4);
+    transition: border-color 0.15s, color 0.15s;
+}
+.zis-cta a:hover {
+    color: #FFC85A;
+    border-bottom-color: #FFB02E;
+}
+
+@media (max-width: 600px) {
+    .zis-cta { font-size: 11px; padding: 8px 10px; }
+    .zis-cta .zis-cta-sep { display: block; height: 4px; margin: 0; visibility: hidden; }
+}
 """.strip()

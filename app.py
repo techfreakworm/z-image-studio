@@ -244,9 +244,21 @@ HEADER_HTML = """
 """.strip()
 
 
+CTA_HTML = """
+<div class="zis-cta">
+  Built with care.
+  <strong>Drop a <span class="zis-cta-heart">♥</span> at the top</strong> to support it
+  <span class="zis-cta-sep">·</span>
+  Follow <a href="https://huggingface.co/techfreakworm" target="_blank" rel="noopener noreferrer">@techfreakworm</a>
+  for what's next.
+</div>
+""".strip()
+
+
 def build_app() -> gr.Blocks:
     with gr.Blocks(theme=theme.build_theme(), css=theme.CSS, title="Z-Image Studio") as demo:
         gr.HTML(HEADER_HTML)
+        gr.HTML(CTA_HTML)
 
         with gr.Tabs():
             with gr.Tab("Text → Image"):
