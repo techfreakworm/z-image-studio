@@ -111,6 +111,14 @@ def call_controlnet(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dic
         )
         control_image = input_image
 
+    # Same modulus-of-16 dance as call_upscale: DiffSynth's VAE encode rounds *down*
+    # for control_latents while the noise allocator rounds *up* for inpaint_mask, so
+    # an unaligned image makes torch.concat on control_context raise.
+    w, h = control_image.size
+    aligned_w, aligned_h = (w // 16) * 16, (h // 16) * 16
+    if (aligned_w, aligned_h) != (w, h):
+        control_image = control_image.crop((0, 0, aligned_w, aligned_h))
+
     _swap_transformer(pipe, "Turbo")
 
     cn_input = ControlNetInput(image=control_image, scale=float(params.get("controlnet_scale", 1.0)))
