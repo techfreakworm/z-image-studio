@@ -89,8 +89,8 @@ def build_t2i_tab() -> dict[str, gr.components.Component]:
             steps = gr.Slider(1, 50, value=8, step=1, label="Steps", info=TOOLTIPS["steps"])
 
             with gr.Accordion("Advanced", open=False):
-                width = gr.Slider(384, 1536, value=1024, step=64, label="Width", info=TOOLTIPS["width"])
-                height = gr.Slider(384, 1536, value=1024, step=64, label="Height", info=TOOLTIPS["height"])
+                width = gr.Slider(384, 2048, value=1024, step=16, label="Width", info=TOOLTIPS["width"])
+                height = gr.Slider(384, 2048, value=1024, step=16, label="Height", info=TOOLTIPS["height"])
                 seed = gr.Number(value=0, precision=0, label="Seed", info=TOOLTIPS["seed"])
 
             generate_btn = gr.Button("Generate", variant="primary")
