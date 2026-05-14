@@ -182,8 +182,6 @@ def test_upscale_runs_realesrgan_then_pipeline(fake_pipe, monkeypatch):
             refine_steps=5,
             refine_denoise=0.33,
             seed=42,
-            lora_path=None,
-            lora_strength=0.0,
             esrgan_model_path="/fake/path/RealESRGAN_x4plus.pth",
         ),
     )
@@ -220,8 +218,6 @@ def test_upscale_crops_to_multiple_of_16(fake_pipe, monkeypatch):
             refine_steps=5,
             refine_denoise=0.33,
             seed=0,
-            lora_path=None,
-            lora_strength=0.0,
             esrgan_model_path="/fake/path/RealESRGAN_x4plus.pth",
         ),
     )
@@ -244,8 +240,6 @@ def test_upscale_rejects_missing_image(fake_pipe):
                 refine_steps=5,
                 refine_denoise=0.33,
                 seed=0,
-                lora_path=None,
-                lora_strength=0.0,
                 esrgan_model_path="/fake.pth",
             ),
         )

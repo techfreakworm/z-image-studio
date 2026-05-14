@@ -105,12 +105,16 @@ def test_build_upscale_tab_returns_components():
         "refine_steps",
         "refine_denoise",
         "seed",
-        "lora_enabled",
-        "lora_group",
-        "lora_path",
-        "lora_strength",
         "generate_btn",
         "output_image",
         "output_meta",
     }
     assert expected.issubset(components.keys())
+
+
+def test_build_upscale_tab_has_no_lora_components():
+    """LoRA is intentionally not wired on Upscale — the refinement pass uses
+    too low a denoising window for style LoRAs to meaningfully apply."""
+    components = ui.build_upscale_tab()
+    for key in ("lora_enabled", "lora_group", "lora_path", "lora_strength"):
+        assert key not in components

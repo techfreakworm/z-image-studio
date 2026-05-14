@@ -262,23 +262,6 @@ def build_upscale_tab() -> dict[str, gr.components.Component]:
                     info=TOOLTIPS["refine_denoise"],
                 )
 
-            lora_enabled = gr.Checkbox(label="Use a LoRA (compatible with Z-Image-Turbo)", value=False)
-            with gr.Group(visible=False) as lora_group:
-                lora_path = gr.File(
-                    label="LoRA file",
-                    file_types=[".safetensors"],
-                    type="filepath",
-                    elem_classes=["zis-lora-file"],
-                )
-                lora_strength = gr.Slider(
-                    0.0,
-                    1.5,
-                    value=0.8,
-                    step=0.05,
-                    label="LoRA strength",
-                    info=TOOLTIPS["lora_strength"],
-                )
-
             with gr.Accordion("Advanced", open=False):
                 seed = gr.Number(value=0, precision=0, label="Seed", info=TOOLTIPS["seed"])
 
@@ -302,10 +285,6 @@ def build_upscale_tab() -> dict[str, gr.components.Component]:
         refine_steps=refine_steps,
         refine_denoise=refine_denoise,
         seed=seed,
-        lora_enabled=lora_enabled,
-        lora_group=lora_group,
-        lora_path=lora_path,
-        lora_strength=lora_strength,
         generate_btn=generate_btn,
         output_image=output_image,
         output_meta=output_meta,

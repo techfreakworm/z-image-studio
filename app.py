@@ -206,26 +206,14 @@ def on_upscale_generate(
     refine_steps,
     refine_denoise,
     seed,
-    lora_enabled,
-    lora_path,
-    lora_strength,
     progress=gr.Progress(track_tqdm=True),  # noqa: B008
 ):
-    if not lora_enabled:
-        lora_path = None
-    try:
-        lora_p = _coerce_lora(lora_path)
-    except lora_mod.LoRAValidationError as e:
-        raise gr.Error(str(e)) from e
-
     params = dict(
         prompt=prompt or "masterpiece, 8k",
         input_image=input_image,
         refine_steps=int(refine_steps),
         refine_denoise=float(refine_denoise),
         seed=_maybe_random_seed(int(seed)),
-        lora_path=lora_p,
-        lora_strength=float(lora_strength),
         esrgan_model_path=_esrgan_path(),
     )
     image, meta = backend.generate_with_retry(get_backend(), mode="upscale", params=params)
@@ -344,16 +332,8 @@ def build_app() -> gr.Blocks:
                         u["refine_steps"],
                         u["refine_denoise"],
                         u["seed"],
-                        u["lora_enabled"],
-                        u["lora_path"],
-                        u["lora_strength"],
                     ],
                     outputs=[u["output_image"], u["output_meta"]],
-                )
-                u["lora_enabled"].change(
-                    fn=lambda v: gr.Group(visible=v),
-                    inputs=[u["lora_enabled"]],
-                    outputs=[u["lora_group"]],
                 )
     return demo
 

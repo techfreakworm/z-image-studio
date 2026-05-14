@@ -185,8 +185,7 @@ def call_upscale(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dict[s
         seed=int(params.get("seed", 0)),
     )
 
-    with lora.applied_lora(pipe, params.get("lora_path"), params.get("lora_strength", 0.0)):
-        image = pipe(**kwargs)
+    image = pipe(**kwargs)
 
     meta = dict(
         mode="upscale",
@@ -196,7 +195,5 @@ def call_upscale(pipe: Any, params: dict[str, Any]) -> tuple[Image.Image, dict[s
         seed=kwargs["seed"],
         width=upscaled.size[0],
         height=upscaled.size[1],
-        lora=str(params.get("lora_path")) if params.get("lora_path") else None,
-        lora_strength=params.get("lora_strength", 0.0),
     )
     return image, meta
