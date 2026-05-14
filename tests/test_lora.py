@@ -37,6 +37,21 @@ def test_sniff_rejects_non_safetensors(tmp_path):
     assert "safetensors" in str(exc.value).lower()
 
 
+def test_sniff_accepts_diffusion_model_prefix(tmp_path):
+    """CivitAI / Kohya LoRAs prefix keys with ``diffusion_model.`` — must be accepted."""
+    p = tmp_path / "civitai.safetensors"
+    _write_safetensors(
+        p,
+        {
+            "diffusion_model.layers.0.adaLN_modulation.0.lora_A.weight": {"dtype": "BF16", "shape": [16, 3840]},
+            "diffusion_model.layers.0.adaLN_modulation.0.lora_B.weight": {"dtype": "BF16", "shape": [3840, 16]},
+        },
+    )
+    info = lora.sniff(p)
+    assert info.rank == 16
+    assert info.target == "transformer"
+
+
 def test_sniff_rejects_non_zimage_keys(tmp_path):
     p = tmp_path / "wrong.safetensors"
     _write_safetensors(

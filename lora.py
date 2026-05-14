@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-ZIMAGE_LORA_PREFIXES = ("transformer.", "dit.", "model.transformer.")
+ZIMAGE_LORA_PREFIXES = ("transformer.", "dit.", "model.transformer.", "diffusion_model.")
 
 
 class LoRAValidationError(ValueError):
@@ -97,27 +97,15 @@ def applied_lora(pipe: Any, path: Path | str | None, strength: float) -> Iterato
 
 
 def _apply_lora_impl(pipe: Any, path: Path | str, strength: float) -> None:
-    """Apply a LoRA to ``pipe.dit``. Imports DiffSynth lazily for testability."""
-    from diffsynth.utils.lora import merge_lora
+    """Apply a LoRA to ``pipe.dit`` using DiffSynth's ``load_lora`` (hotload mode).
 
-    merge_lora(pipe.dit, str(path), alpha=float(strength))
+    ``GeneralLoRALoader.convert_state_dict`` normalises CivitAI-style
+    ``diffusion_model.*`` keys into the bare module-path keys DiffSynth's
+    AutoWrappedLinear modules consume, so we don't need to remap ourselves.
+    """
+    pipe.load_lora(module=pipe.dit, lora_config=str(path), alpha=float(strength), verbose=0)
 
 
 def _revert_lora_impl(pipe: Any) -> None:
-    """Revert the most recent LoRA from ``pipe.dit``.
-
-    Tries DiffSynth's ``unmerge_lora`` first; falls back to re-fetching clean
-    weights from the model pool if unavailable.
-    """
-    try:
-        from diffsynth.utils.lora import unmerge_lora
-
-        unmerge_lora(pipe.dit)
-        return
-    except ImportError:
-        pass
-
-    if hasattr(pipe, "model_pool"):
-        variant = getattr(pipe.dit, "_zis_variant", None)
-        if variant:
-            pipe.dit = pipe.model_pool.fetch_model("z_image_dit", variant=variant)
+    """Clear the hotloaded LoRA so the cached transformer is left clean."""
+    pipe.clear_lora(verbose=0)
